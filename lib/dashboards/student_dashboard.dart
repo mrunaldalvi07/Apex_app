@@ -5,6 +5,8 @@ import '../auth/login_screen.dart';
 import '../screens/student_complaint_screen.dart';
 import '../screens/student_live_attendance.dart';
 import '../screens/view_classroom_screen.dart';
+import '../screens/student_notice_screen.dart';
+
 class StudentDashboard extends StatelessWidget {
   const StudentDashboard({super.key, required String uid});
 
@@ -13,9 +15,7 @@ class StudentDashboard extends StatelessWidget {
 
     Navigator.pushAndRemoveUntil(
       context,
-      MaterialPageRoute(
-        builder: (_) => const LoginScreen(),
-      ),
+      MaterialPageRoute(builder: (_) => const LoginScreen()),
       (route) => false,
     );
   }
@@ -32,12 +32,10 @@ class StudentDashboard extends StatelessWidget {
       borderRadius: BorderRadius.circular(15),
       child: Card(
         elevation: 5,
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(15),
-        ),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
         child: Container(
           decoration: BoxDecoration(
-            color: color.withOpacity(0.1),
+            color: color.withValues(alpha: 0.1),
             borderRadius: BorderRadius.circular(15),
           ),
           child: Column(
@@ -80,22 +78,20 @@ class StudentDashboard extends StatelessWidget {
           crossAxisSpacing: 20,
           mainAxisSpacing: 20,
           children: [
-
             dashboardCard(
-  context,
-  Icons.report_problem,
-  "Complaint\nManagement",
-  Colors.red,
-  () {
-    Navigator.push(
-      context,
-      MaterialPageRoute(
-        builder: (_) =>
-            const StudentComplaintScreen(),
-      ),
-    );
-  },
-),
+              context,
+              Icons.report_problem,
+              "Complaint\nManagement",
+              Colors.red,
+              () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (_) => const StudentComplaintScreen(),
+                  ),
+                );
+              },
+            ),
 
             dashboardCard(
               context,
@@ -106,28 +102,39 @@ class StudentDashboard extends StatelessWidget {
                 Navigator.push(
                   context,
                   MaterialPageRoute(
-                    builder: (_) =>
-                        const StudentLiveAttendanceScreen(),
+                    builder: (_) => const StudentLiveAttendanceScreen(),
                   ),
                 );
               },
             ),
 
             dashboardCard(
-  context,
-  Icons.meeting_room,
-  "Classroom\nScheduler",
-  Colors.orange,
-  () {
-    Navigator.push(
-      context,
-      MaterialPageRoute(
-        builder: (_) => const ClassroomScreen(),
-      ),
-    );
-  },
-),
+              context,
+              Icons.meeting_room,
+              "Classroom\nScheduler",
+              Colors.orange,
+              () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (_) => const ClassroomScreen()),
+                );
+              },
+            ),
 
+            dashboardCard(
+              context,
+              Icons.campaign,
+              "Notice\nManagement",
+              Colors.blue,
+              () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (_) => const StudentNoticeScreen(),
+                  ),
+                );
+              },
+            ),
           ],
         ),
       ),

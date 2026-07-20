@@ -4,6 +4,7 @@ import '../auth/login_screen.dart';
 import '../screens/attendance_management_screen.dart';
 import '../screens/classroom_management_screen.dart';
 import '../screens/complaint_management_screen.dart';
+import '../screens/faculty_notice_screen.dart';
 
 class FacultyDashboard extends StatelessWidget {
   const FacultyDashboard({super.key, required String uid});
@@ -13,9 +14,7 @@ class FacultyDashboard extends StatelessWidget {
 
     Navigator.pushAndRemoveUntil(
       context,
-      MaterialPageRoute(
-        builder: (_) => const LoginScreen(),
-      ),
+      MaterialPageRoute(builder: (_) => const LoginScreen()),
       (route) => false,
     );
   }
@@ -32,12 +31,10 @@ class FacultyDashboard extends StatelessWidget {
       borderRadius: BorderRadius.circular(15),
       child: Card(
         elevation: 5,
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(15),
-        ),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
         child: Container(
           decoration: BoxDecoration(
-            color: color.withOpacity(0.1),
+            color: color.withValues(alpha: 0.1),
             borderRadius: BorderRadius.circular(15),
           ),
           child: Column(
@@ -80,53 +77,64 @@ class FacultyDashboard extends StatelessWidget {
           crossAxisSpacing: 20,
           mainAxisSpacing: 20,
           children: [
+            dashboardCard(
+              context,
+              Icons.report_problem,
+              "Complaint\nManagement",
+              Colors.red,
+              () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (_) => const ComplaintManagementScreen(),
+                  ),
+                );
+              },
+            ),
 
             dashboardCard(
-                context,
-                Icons.report_problem,
-                "Complaint\nManagement",
-                Colors.red,
-                () {
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (_) => const ComplaintManagementScreen(),
-                    ),
-                  );
-                },
-              ),
+              context,
+              Icons.fact_check,
+              "Attendance\nIndicator",
+              Colors.green,
+              () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (_) => const AttendanceManagementScreen(),
+                  ),
+                );
+              },
+            ),
+            dashboardCard(
+              context,
+              Icons.meeting_room,
+              "Classroom\nScheduler",
+              Colors.orange,
+              () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (_) => const ClassroomManagementScreen(),
+                  ),
+                );
+              },
+            ),
 
             dashboardCard(
-  context,
-  Icons.fact_check,
-  "Attendance\nIndicator",
-  Colors.green,
-  () {
-    Navigator.push(
-      context,
-      MaterialPageRoute(
-        builder: (_) =>
-            const AttendanceManagementScreen(),
-      ),
-    );
-  },
-),
-            dashboardCard(
-  context,
-  Icons.meeting_room,
-  "Classroom\nScheduler",
-  Colors.orange,
-  () {
-    Navigator.push(
-      context,
-      MaterialPageRoute(
-        builder: (_) => const ClassroomManagementScreen(),
-      ),
-    );
-  },
-),
-
-          
+              context,
+              Icons.campaign,
+              "Notice\nManagement",
+              Colors.blue,
+              () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (_) => const FacultyNoticeScreen(),
+                  ),
+                );
+              },
+            ),
           ],
         ),
       ),

@@ -8,12 +8,10 @@ class RegisterScreen extends StatefulWidget {
   const RegisterScreen({super.key});
 
   @override
-  State<RegisterScreen> createState() =>
-      _RegisterScreenState();
+  State<RegisterScreen> createState() => _RegisterScreenState();
 }
 
-class _RegisterScreenState
-    extends State<RegisterScreen> {
+class _RegisterScreenState extends State<RegisterScreen> {
   final nameController = TextEditingController();
   final emailController = TextEditingController();
   final passwordController = TextEditingController();
@@ -29,48 +27,41 @@ class _RegisterScreenState
     try {
       setState(() => loading = true);
 
-      UserCredential userCredential =
-          await FirebaseAuth.instance
-              .createUserWithEmailAndPassword(
-        email: emailController.text.trim(),
-        password: passwordController.text.trim(),
-      );
+      UserCredential userCredential = await FirebaseAuth.instance
+          .createUserWithEmailAndPassword(
+            email: emailController.text.trim(),
+            password: passwordController.text.trim(),
+          );
 
       await FirebaseFirestore.instance
           .collection('users')
           .doc(userCredential.user!.uid)
           .set({
-        'uid': userCredential.user!.uid,
-        'name': nameController.text.trim(),
-        'email': emailController.text.trim(),
-        'rollNo': rollNoController.text.trim(),
-        'branch': selectedBranch,
-        'year': selectedYear,
-        'role': selectedRole,
-        'createdAt': FieldValue.serverTimestamp(),
-      });
+            'uid': userCredential.user!.uid,
+            'name': nameController.text.trim(),
+            'email': emailController.text.trim(),
+            'rollNo': rollNoController.text.trim(),
+            'branch': selectedBranch,
+            'year': selectedYear,
+            'role': selectedRole,
+            'createdAt': FieldValue.serverTimestamp(),
+          });
 
       if (!mounted) return;
 
       Navigator.pushAndRemoveUntil(
         context,
-        MaterialPageRoute(
-          builder: (_) => const RoleRouter(),
-        ),
+        MaterialPageRoute(builder: (_) => const RoleRouter()),
         (route) => false,
       );
     } on FirebaseAuthException catch (e) {
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(
-            e.message ?? 'Registration Failed',
-          ),
-        ),
+        SnackBar(content: Text(e.message ?? 'Registration Failed')),
       );
     } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(e.toString())),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(e.toString())));
     }
 
     if (mounted) {
@@ -90,15 +81,11 @@ class _RegisterScreenState
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('APEX Register'),
-        centerTitle: true,
-      ),
+      appBar: AppBar(title: const Text('APEX Register'), centerTitle: true),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(16),
         child: Column(
           children: [
-
             TextField(
               controller: nameController,
               decoration: const InputDecoration(
@@ -141,20 +128,14 @@ class _RegisterScreenState
             const SizedBox(height: 15),
 
             DropdownButtonFormField<String>(
-              value: selectedBranch,
+              initialValue: selectedBranch,
               decoration: const InputDecoration(
                 labelText: 'Branch',
                 border: OutlineInputBorder(),
               ),
               items: const [
-                DropdownMenuItem(
-                  value: 'IT',
-                  child: Text('IT'),
-                ),
-                DropdownMenuItem(
-                  value: 'CM',
-                  child: Text('CM'),
-                ),
+                DropdownMenuItem(value: 'IT', child: Text('IT')),
+                DropdownMenuItem(value: 'CM', child: Text('CM')),
               ],
               onChanged: (value) {
                 setState(() {
@@ -166,24 +147,15 @@ class _RegisterScreenState
             const SizedBox(height: 15),
 
             DropdownButtonFormField<String>(
-              value: selectedYear,
+              initialValue: selectedYear,
               decoration: const InputDecoration(
                 labelText: 'Year',
                 border: OutlineInputBorder(),
               ),
               items: const [
-                DropdownMenuItem(
-                  value: '1',
-                  child: Text('1st Year'),
-                ),
-                DropdownMenuItem(
-                  value: '2',
-                  child: Text('2nd Year'),
-                ),
-                DropdownMenuItem(
-                  value: '3',
-                  child: Text('3rd Year'),
-                ),
+                DropdownMenuItem(value: '1', child: Text('1st Year')),
+                DropdownMenuItem(value: '2', child: Text('2nd Year')),
+                DropdownMenuItem(value: '3', child: Text('3rd Year')),
               ],
               onChanged: (value) {
                 setState(() {
@@ -195,28 +167,16 @@ class _RegisterScreenState
             const SizedBox(height: 15),
 
             DropdownButtonFormField<String>(
-              value: selectedRole,
+              initialValue: selectedRole,
               decoration: const InputDecoration(
                 labelText: 'Role',
                 border: OutlineInputBorder(),
               ),
               items: const [
-                DropdownMenuItem(
-                  value: 'student',
-                  child: Text('Student'),
-                ),
-                DropdownMenuItem(
-                  value: 'faculty',
-                  child: Text('Faculty'),
-                ),
-                DropdownMenuItem(
-                  value: 'cr',
-                  child: Text('CR'),
-                ),
-                DropdownMenuItem(
-                  value: 'admin',
-                  child: Text('Admin'),
-                ),
+                DropdownMenuItem(value: 'student', child: Text('Student')),
+                DropdownMenuItem(value: 'faculty', child: Text('Faculty')),
+                DropdownMenuItem(value: 'cr', child: Text('CR')),
+                DropdownMenuItem(value: 'admin', child: Text('Admin')),
               ],
               onChanged: (value) {
                 setState(() {
@@ -250,9 +210,7 @@ class _RegisterScreenState
               onPressed: () {
                 Navigator.pop(context);
               },
-              child: const Text(
-                'Already have an account? Login',
-              ),
+              child: const Text('Already have an account? Login'),
             ),
           ],
         ),

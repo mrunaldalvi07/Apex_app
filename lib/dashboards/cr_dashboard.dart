@@ -5,6 +5,7 @@ import '../auth/login_screen.dart';
 import '../screens/complaint_list_screen.dart';
 import '../screens/attendance_management_screen.dart';
 import '../screens/classroom_management_screen.dart';
+import '../screens/cr_notice_screen.dart';
 
 class CrDashboard extends StatelessWidget {
   const CrDashboard({super.key});
@@ -14,9 +15,7 @@ class CrDashboard extends StatelessWidget {
 
     Navigator.pushAndRemoveUntil(
       context,
-      MaterialPageRoute(
-        builder: (_) => const LoginScreen(),
-      ),
+      MaterialPageRoute(builder: (_) => const LoginScreen()),
       (route) => false,
     );
   }
@@ -35,7 +34,7 @@ class CrDashboard extends StatelessWidget {
         elevation: 5,
         child: Container(
           decoration: BoxDecoration(
-            color: color.withOpacity(0.1),
+            color: color.withValues(alpha: 0.1),
             borderRadius: BorderRadius.circular(15),
           ),
           child: Column(
@@ -46,9 +45,7 @@ class CrDashboard extends StatelessWidget {
               Text(
                 title,
                 textAlign: TextAlign.center,
-                style: const TextStyle(
-                  fontWeight: FontWeight.bold,
-                ),
+                style: const TextStyle(fontWeight: FontWeight.bold),
               ),
             ],
           ),
@@ -77,7 +74,6 @@ class CrDashboard extends StatelessWidget {
           crossAxisSpacing: 20,
           mainAxisSpacing: 20,
           children: [
-
             dashboardCard(
               context,
               Icons.report_problem,
@@ -105,29 +101,39 @@ class CrDashboard extends StatelessWidget {
                 Navigator.push(
                   context,
                   MaterialPageRoute(
-                    builder: (_) =>
-                        const AttendanceManagementScreen(),
+                    builder: (_) => const AttendanceManagementScreen(),
                   ),
                 );
               },
             ),
 
-            
+            dashboardCard(
+              context,
+              Icons.meeting_room,
+              "Classroom\nScheduler",
+              Colors.orange,
+              () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (_) => const ClassroomManagementScreen(),
+                  ),
+                );
+              },
+            ),
 
-          dashboardCard(
-  context,
-  Icons.meeting_room,
-  "Classroom\nScheduler",
-  Colors.orange,
-  () {
-    Navigator.push(
-      context,
-      MaterialPageRoute(
-        builder: (_) => const ClassroomManagementScreen(),
-      ),
-    );
-  },
-),
+            dashboardCard(
+              context,
+              Icons.campaign,
+              "Notice\nManagement",
+              Colors.blue,
+              () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (_) => const CRNoticeScreen()),
+                );
+              },
+            ),
           ],
         ),
       ),

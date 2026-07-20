@@ -13,12 +13,10 @@ class ComplaintDetailsScreen extends StatefulWidget {
   });
 
   @override
-  State<ComplaintDetailsScreen> createState() =>
-      _ComplaintDetailsScreenState();
+  State<ComplaintDetailsScreen> createState() => _ComplaintDetailsScreenState();
 }
 
-class _ComplaintDetailsScreenState
-    extends State<ComplaintDetailsScreen> {
+class _ComplaintDetailsScreenState extends State<ComplaintDetailsScreen> {
   late TextEditingController remarkController;
 
   @override
@@ -53,9 +51,7 @@ class _ComplaintDetailsScreenState
     final complaint = widget.complaint;
 
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Complaint Details'),
-      ),
+      appBar: AppBar(title: const Text('Complaint Details')),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(20),
         child: Column(
@@ -63,10 +59,7 @@ class _ComplaintDetailsScreenState
           children: [
             Text(
               complaint.title,
-              style: const TextStyle(
-                fontSize: 26,
-                fontWeight: FontWeight.bold,
-              ),
+              style: const TextStyle(fontSize: 26, fontWeight: FontWeight.bold),
             ),
 
             const SizedBox(height: 15),
@@ -79,9 +72,7 @@ class _ComplaintDetailsScreenState
                   fontWeight: FontWeight.bold,
                 ),
               ),
-              backgroundColor: getStatusColor(
-                complaint.status,
-              ),
+              backgroundColor: getStatusColor(complaint.status),
             ),
 
             const SizedBox(height: 20),
@@ -94,8 +85,7 @@ class _ComplaintDetailsScreenState
               child: Padding(
                 padding: const EdgeInsets.all(16),
                 child: Column(
-                  crossAxisAlignment:
-                      CrossAxisAlignment.start,
+                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     const Text(
                       'Complaint Information',
@@ -107,21 +97,15 @@ class _ComplaintDetailsScreenState
 
                     const Divider(),
 
-                    Text(
-                      'Complaint ID: ${complaint.complaintId}',
-                    ),
+                    Text('Complaint ID: ${complaint.complaintId}'),
 
                     const SizedBox(height: 10),
 
-                    Text(
-                      'Category: ${complaint.category}',
-                    ),
+                    Text('Category: ${complaint.category}'),
 
                     const SizedBox(height: 10),
 
-                    Text(
-                      'Complaint Type: ${complaint.complaintType}',
-                    ),
+                    Text('Complaint Type: ${complaint.complaintType}'),
 
                     const SizedBox(height: 10),
 
@@ -145,8 +129,7 @@ class _ComplaintDetailsScreenState
               child: Padding(
                 padding: const EdgeInsets.all(16),
                 child: Column(
-                  crossAxisAlignment:
-                      CrossAxisAlignment.start,
+                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     const Text(
                       'Description',
@@ -160,9 +143,7 @@ class _ComplaintDetailsScreenState
 
                     Text(
                       complaint.description,
-                      style: const TextStyle(
-                        fontSize: 16,
-                      ),
+                      style: const TextStyle(fontSize: 16),
                     ),
                   ],
                 ),
@@ -179,8 +160,7 @@ class _ComplaintDetailsScreenState
               child: Padding(
                 padding: const EdgeInsets.all(16),
                 child: Column(
-                  crossAxisAlignment:
-                      CrossAxisAlignment.start,
+                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     const Text(
                       'Faculty Update',
@@ -196,9 +176,7 @@ class _ComplaintDetailsScreenState
                       complaint.facultyRemark.isEmpty
                           ? 'No updates available.'
                           : complaint.facultyRemark,
-                      style: const TextStyle(
-                        fontSize: 16,
-                      ),
+                      style: const TextStyle(fontSize: 16),
                     ),
                   ],
                 ),
@@ -210,36 +188,24 @@ class _ComplaintDetailsScreenState
 
               const Text(
                 'Update Status',
-                style: TextStyle(
-                  fontSize: 18,
-                  fontWeight: FontWeight.bold,
-                ),
+                style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
               ),
 
               const SizedBox(height: 10),
 
               DropdownButtonFormField<String>(
-                value: complaint.status,
-                decoration: const InputDecoration(
-                  border: OutlineInputBorder(),
-                ),
+                initialValue: complaint.status,
+                decoration: const InputDecoration(border: OutlineInputBorder()),
                 items: const [
-                  DropdownMenuItem(
-                    value: 'Pending',
-                    child: Text('Pending'),
-                  ),
+                  DropdownMenuItem(value: 'Pending', child: Text('Pending')),
                   DropdownMenuItem(
                     value: 'In Progress',
                     child: Text('In Progress'),
                   ),
-                  DropdownMenuItem(
-                    value: 'Resolved',
-                    child: Text('Resolved'),
-                  ),
+                  DropdownMenuItem(value: 'Resolved', child: Text('Resolved')),
                 ],
                 onChanged: (value) async {
-                  await ComplaintService()
-                      .updateComplaintStatus(
+                  await ComplaintService().updateComplaintStatus(
                     complaint.complaintId,
                     value!,
                   );
@@ -256,8 +222,7 @@ class _ComplaintDetailsScreenState
                 controller: remarkController,
                 maxLines: 3,
                 decoration: const InputDecoration(
-                  labelText:
-                      'Faculty Update (Optional)',
+                  labelText: 'Faculty Update (Optional)',
                   border: OutlineInputBorder(),
                 ),
               ),
@@ -270,20 +235,14 @@ class _ComplaintDetailsScreenState
                   icon: const Icon(Icons.save),
                   label: const Text('Save Update'),
                   onPressed: () async {
-                    await ComplaintService()
-                        .updateFacultyRemark(
+                    await ComplaintService().updateFacultyRemark(
                       complaint.complaintId,
                       remarkController.text.trim(),
                     );
 
                     if (context.mounted) {
-                      ScaffoldMessenger.of(context)
-                          .showSnackBar(
-                        const SnackBar(
-                          content: Text(
-                            'Faculty update saved',
-                          ),
-                        ),
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(content: Text('Faculty update saved')),
                       );
                     }
                   },
@@ -296,47 +255,32 @@ class _ComplaintDetailsScreenState
                 width: double.infinity,
                 child: ElevatedButton.icon(
                   icon: const Icon(Icons.delete),
-                  label: const Text(
-                    'Delete Complaint',
-                  ),
+                  label: const Text('Delete Complaint'),
                   style: ElevatedButton.styleFrom(
                     backgroundColor: Colors.red,
                     foregroundColor: Colors.white,
                   ),
                   onPressed: () async {
-                    bool? confirm =
-                        await showDialog<bool>(
+                    bool? confirm = await showDialog<bool>(
                       context: context,
                       builder: (context) {
                         return AlertDialog(
-                          title: const Text(
-                            'Delete Complaint',
-                          ),
+                          title: const Text('Delete Complaint'),
                           content: const Text(
                             'Are you sure you want to delete this complaint?',
                           ),
                           actions: [
                             TextButton(
                               onPressed: () {
-                                Navigator.pop(
-                                  context,
-                                  false,
-                                );
+                                Navigator.pop(context, false);
                               },
-                              child: const Text(
-                                'Cancel',
-                              ),
+                              child: const Text('Cancel'),
                             ),
                             TextButton(
                               onPressed: () {
-                                Navigator.pop(
-                                  context,
-                                  true,
-                                );
+                                Navigator.pop(context, true);
                               },
-                              child: const Text(
-                                'Delete',
-                              ),
+                              child: const Text('Delete'),
                             ),
                           ],
                         );
@@ -344,8 +288,7 @@ class _ComplaintDetailsScreenState
                     );
 
                     if (confirm == true) {
-                      await ComplaintService()
-                          .deleteComplaint(
+                      await ComplaintService().deleteComplaint(
                         complaint.complaintId,
                       );
 
