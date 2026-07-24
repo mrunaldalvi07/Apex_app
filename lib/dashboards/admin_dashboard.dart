@@ -1,3 +1,4 @@
+import 'package:apex_app/screens/complaint_management_screen.dart';
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 
@@ -83,10 +84,7 @@ class AdminDashboard extends StatelessWidget {
                 Navigator.push(
                   context,
                   MaterialPageRoute(
-                    builder: (_) => const ComplaintListScreen(
-                      showOnlyMyComplaints: false,
-                      isFaculty: true,
-                    ),
+                    builder: (_) => const ComplaintManagementScreen(),
                   ),
                 );
               },
