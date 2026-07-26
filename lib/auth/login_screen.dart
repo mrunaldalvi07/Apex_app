@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import '../services/fcm_service.dart';
 
 import 'register_screen.dart';
 import 'role_router.dart';
@@ -36,6 +37,8 @@ class _LoginScreenState
       );
 
       if (!mounted) return;
+
+      await FCMService().initialize();
 
       Navigator.pushReplacement(
         context,

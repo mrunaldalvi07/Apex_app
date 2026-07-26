@@ -1,5 +1,8 @@
 import 'package:flutter/material.dart';
+
 import '../services/attendance_export_service.dart';
+import 'attendance_summary_screen.dart';
+import 'detention_list_screen.dart';
 
 class AttendanceReportScreen extends StatefulWidget {
   const AttendanceReportScreen({super.key});
@@ -13,11 +16,12 @@ class _AttendanceReportScreenState
     extends State<AttendanceReportScreen> {
   String selectedBranch = "IT";
   String selectedYear = "1";
+  String selectedMonth = "January";
+
+  bool loading = false;
 
   final TextEditingController courseController =
       TextEditingController();
-
-  bool loading = false;
 
   final List<String> branches = [
     "IT",
@@ -28,6 +32,21 @@ class _AttendanceReportScreenState
     "1",
     "2",
     "3",
+  ];
+
+  final List<String> months = [
+    "January",
+    "February",
+    "March",
+    "April",
+    "May",
+    "June",
+    "July",
+    "August",
+    "September",
+    "October",
+    "November",
+    "December",
   ];
 
   Future<void> generateSheet() async {
@@ -48,6 +67,7 @@ class _AttendanceReportScreenState
         branch: selectedBranch,
         year: selectedYear,
         course: course,
+        month: selectedMonth,
       );
 
       if (!mounted) return;
@@ -55,16 +75,16 @@ class _AttendanceReportScreenState
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
           content: Text(
-            "Attendance Sheet Generated",
+            "Attendance Excel Generated",
           ),
         ),
       );
     } catch (e) {
+      if (!mounted) return;
+
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text(
-            e.toString(),
-          ),
+          content: Text(e.toString()),
         ),
       );
     } finally {
@@ -74,28 +94,44 @@ class _AttendanceReportScreenState
     }
   }
 
+  Widget buildButton({
+    required IconData icon,
+    required String text,
+    required VoidCallback onPressed,
+    Color? color,
+  }) {
+    return SizedBox(
+      width: double.infinity,
+      height: 55,
+      child: ElevatedButton.icon(
+        icon: Icon(icon),
+        label: Text(text),
+        style: ElevatedButton.styleFrom(
+          backgroundColor: color,
+        ),
+        onPressed: onPressed,
+      ),
+    );
+  }
+
   @override
   void dispose() {
     courseController.dispose();
     super.dispose();
   }
-
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text(
-          "Attendance Reports",
-        ),
+        title: const Text("Attendance Reports"),
       ),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(16),
         child: Column(
           children: [
             DropdownButtonFormField<String>(
-              initialValue: selectedBranch,
-              decoration:
-                  const InputDecoration(
+              value: selectedBranch,
+              decoration: const InputDecoration(
                 labelText: "Branch",
                 border: OutlineInputBorder(),
               ),
@@ -117,9 +153,8 @@ class _AttendanceReportScreenState
             const SizedBox(height: 15),
 
             DropdownButtonFormField<String>(
-              initialValue: selectedYear,
-              decoration:
-                  const InputDecoration(
+              value: selectedYear,
+              decoration: const InputDecoration(
                 labelText: "Year",
                 border: OutlineInputBorder(),
               ),
@@ -144,41 +179,128 @@ class _AttendanceReportScreenState
               controller: courseController,
               textCapitalization:
                   TextCapitalization.characters,
-              decoration:
-                  const InputDecoration(
+              decoration: const InputDecoration(
                 labelText: "Course",
-                hintText:
-                    "JAVA, DBMS, PYTHON",
+                hintText: "JAVA, DBMS, PYTHON",
                 border: OutlineInputBorder(),
               ),
             ),
 
+            const SizedBox(height: 15),
+
+            DropdownButtonFormField<String>(
+              value: selectedMonth,
+              decoration: const InputDecoration(
+                labelText: "Month",
+                border: OutlineInputBorder(),
+              ),
+              items: months
+                  .map(
+                    (month) => DropdownMenuItem(
+                      value: month,
+                      child: Text(month),
+                    ),
+                  )
+                  .toList(),
+              onChanged: (value) {
+                setState(() {
+                  selectedMonth = value!;
+                });
+              },
+            ),
+
             const SizedBox(height: 30),
 
-            SizedBox(
-              width: double.infinity,
-              height: 55,
-              child: ElevatedButton.icon(
-                icon: loading
-                    ? const SizedBox(
-                        height: 20,
-                        width: 20,
-                        child:
-                            CircularProgressIndicator(
-                          strokeWidth: 2,
-                        ),
-                      )
-                    : const Icon(
-                        Icons.download,
-                      ),
-                label: Text(
-                  loading
-                      ? "Generating..."
-                      : "Generate Excel Sheet",
-                ),
-                onPressed:
-                    loading ? null : generateSheet,
-              ),
+            buildButton(
+              icon: Icons.table_chart,
+              text: "Monthly Attendance Sheet",
+              onPressed: loading ? () {} : generateSheet,
+            ),
+
+            const SizedBox(height: 12),
+
+            buildButton(
+              icon: Icons.analytics,
+              text: "Attendance Summary",
+              onPressed: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (_) => AttendanceSummaryScreen(
+                      branch: selectedBranch,
+                      year: selectedYear,
+                      course: courseController.text
+                          .trim()
+                          .toUpperCase(),
+                      month: selectedMonth,
+                    ),
+                  ),
+                );
+              },
+            ),
+
+            const SizedBox(height: 12),
+
+            buildButton(
+              icon: Icons.warning_amber,
+              text: "Detention List",
+              onPressed: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (_) => DetentionListScreen(
+                      branch: selectedBranch,
+                      year: selectedYear,
+                      course: courseController.text
+                          .trim()
+                          .toUpperCase(),
+                      month: selectedMonth,
+                    ),
+                  ),
+                );
+              },
+            ),
+
+            const SizedBox(height: 12),
+
+            buildButton(
+              icon: Icons.notifications_active,
+              text: "Notify Detained Students",
+              onPressed: () {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(
+                    content: Text(
+                      "Open Detention List and tap Notify",
+                    ),
+                  ),
+                );
+              },
+            ),
+
+            const SizedBox(height: 12),
+
+            buildButton(
+              icon: Icons.download,
+              text: loading
+                  ? "Generating..."
+                  : "Export Excel",
+              onPressed: loading ? () {} : generateSheet,
+            ),
+
+            const SizedBox(height: 12),
+
+            buildButton(
+              icon: Icons.picture_as_pdf,
+              text: "Export PDF",
+              onPressed: () {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(
+                    content: Text(
+                      "PDF Export will be added next",
+                    ),
+                  ),
+                );
+              },
             ),
           ],
         ),

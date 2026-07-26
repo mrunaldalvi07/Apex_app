@@ -1,7 +1,9 @@
+import 'package:apex_app/screens/student_notification_screen.dart';
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:geolocator/geolocator.dart';
+import '../services/notification_service.dart';
 
 class StudentLiveAttendanceScreen extends StatefulWidget {
   const StudentLiveAttendanceScreen({super.key});
@@ -120,7 +122,7 @@ class _StudentLiveAttendanceScreenState
       );
 
       String status =
-          distance <= 500
+          distance <= 6
               ? "Present"
               : "Absent";
 
@@ -202,11 +204,23 @@ class _StudentLiveAttendanceScreenState
     }
 
     return Scaffold(
-      appBar: AppBar(
-        title: const Text(
-          "Live Attendance",
-        ),
-      ),
+     appBar: AppBar(
+  title: const Text("Live Attendance"),
+  actions: [
+    IconButton(
+      icon: const Icon(Icons.notifications),
+      onPressed: () {
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (_) =>
+                const StudentNotificationScreen(),
+          ),
+        );
+      },
+    ),
+  ],
+),
       body: StreamBuilder<QuerySnapshot>(
         stream: FirebaseFirestore.instance
             .collection('live_sessions')
@@ -310,6 +324,19 @@ class _StudentLiveAttendanceScreenState
                           ),
                         ),
                       ),
+                    ElevatedButton.icon(
+  icon: const Icon(Icons.notifications),
+  label: const Text("Notifications"),
+  onPressed: () {
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (_) =>
+            const StudentNotificationScreen(),
+      ),
+    );
+  },
+),
                     ],
                   ),
                 ),

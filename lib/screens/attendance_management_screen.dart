@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 
-import 'faculty_live_attendance_screen.dart';
 import 'attendance_report_screen.dart';
+import 'faculty_live_attendance_screen.dart';
 
 class AttendanceManagementScreen extends StatelessWidget {
   const AttendanceManagementScreen({super.key});
@@ -11,17 +11,21 @@ class AttendanceManagementScreen extends StatelessWidget {
     return Scaffold(
       appBar: AppBar(
         title: const Text("Attendance Management"),
+        centerTitle: true,
       ),
       body: Padding(
         padding: const EdgeInsets.all(20),
         child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-
             SizedBox(
-              width: double.infinity,
+              height: 60,
               child: ElevatedButton.icon(
                 icon: const Icon(Icons.play_circle_fill),
-                label: const Text("Start Attendance Session"),
+                label: const Text(
+                  "Start Attendance Session",
+                  style: TextStyle(fontSize: 16),
+                ),
                 onPressed: () {
                   Navigator.push(
                     context,
@@ -37,10 +41,13 @@ class AttendanceManagementScreen extends StatelessWidget {
             const SizedBox(height: 20),
 
             SizedBox(
-              width: double.infinity,
+              height: 60,
               child: ElevatedButton.icon(
-                icon: const Icon(Icons.description),
-                label: const Text("Generate Attendance Report"),
+                icon: const Icon(Icons.analytics),
+                label: const Text(
+                  "Attendance Reports",
+                  style: TextStyle(fontSize: 16),
+                ),
                 onPressed: () {
                   Navigator.push(
                     context,
