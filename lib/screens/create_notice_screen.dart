@@ -401,6 +401,7 @@ class _CreateNoticeScreenState extends State<CreateNoticeScreen> {
                                 recipients: recipients,
                                 attachmentUrls: attachmentUrls,
                                 createdBy: createdBy,
+                                createdByUid: createdByUid,
                                 pinned: pinned,
                               );
 
