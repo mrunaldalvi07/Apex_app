@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:file_picker/file_picker.dart';
 import '../models/notice.dart';
 import '../services/notice_service.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 
 class CreateNoticeScreen extends StatefulWidget {
   final Notice? notice;
@@ -18,13 +20,13 @@ class _CreateNoticeScreenState extends State<CreateNoticeScreen> {
   bool students = false;
   bool ifStudent = false;
   bool cmStudent = false;
+  bool pinned = false;
 
   final TextEditingController _titleController = TextEditingController();
   final TextEditingController _descController = TextEditingController();
 
   List<PlatformFile> selectedFiles = [];
 
-  @override
   @override
   void initState() {
     super.initState();
@@ -39,13 +41,12 @@ class _CreateNoticeScreenState extends State<CreateNoticeScreen> {
       ifStudent = r.contains("IF");
       cmStudent = r.contains("CM");
       students = ifStudent || cmStudent;
+      pinned = widget.notice!.pinned;
     }
   }
 
   Future<void> pickFiles() async {
-    FilePickerResult? result = await FilePicker.pickFiles(
-      allowMultiple: true,
-    );
+    FilePickerResult? result = await FilePicker.pickFiles(allowMultiple: true);
 
     if (result != null) {
       print(result.files.length);
@@ -59,6 +60,21 @@ class _CreateNoticeScreenState extends State<CreateNoticeScreen> {
           .map((name) => PlatformFile(name: name, size: 0))
           .toList();
     }
+  }
+
+  Future<String?> getCurrentUserName() async {
+    final user = FirebaseAuth.instance.currentUser;
+
+    if (user == null) return null;
+
+    final userDoc = await FirebaseFirestore.instance
+        .collection("users")
+        .doc(user.uid)
+        .get();
+
+    if (!userDoc.exists) return null;
+
+    return userDoc.data()?['name'];
   }
 
   @override
@@ -121,7 +137,7 @@ class _CreateNoticeScreenState extends State<CreateNoticeScreen> {
                         ),
                       ),
 
-                      const SizedBox(height: 16),
+                      // const SizedBox(height: 16),
 
                       // DESCRIPTION CARD
                       Card(
@@ -164,8 +180,7 @@ class _CreateNoticeScreenState extends State<CreateNoticeScreen> {
                         ),
                       ),
 
-                      const SizedBox(height: 24),
-
+                      // const SizedBox(height: 24),
                       Card(
                         elevation: 2,
                         shape: RoundedRectangleBorder(
@@ -251,7 +266,32 @@ class _CreateNoticeScreenState extends State<CreateNoticeScreen> {
                           ),
                         ),
                       ),
-
+                      Card(
+                        elevation: 2,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        child: Padding(
+                          padding: const EdgeInsets.all(16),
+                          child: CheckboxListTile(
+                            contentPadding: EdgeInsets.zero,
+                            controlAffinity: ListTileControlAffinity.leading,
+                            title: const Text(
+                              "Pin Notice",
+                              style: TextStyle(fontWeight: FontWeight.w600),
+                            ),
+                            subtitle: const Text(
+                              "Keep this notice at the top of the notice list",
+                            ),
+                            value: pinned,
+                            onChanged: (bool? value) {
+                              setState(() {
+                                pinned = value ?? false;
+                              });
+                            },
+                          ),
+                        ),
+                      ),
                       Card(
                         elevation: 2,
                         shape: RoundedRectangleBorder(
@@ -341,11 +381,27 @@ class _CreateNoticeScreenState extends State<CreateNoticeScreen> {
                                   .map((file) => file.name)
                                   .toList();
 
+                              final currentUser =
+                                  FirebaseAuth.instance.currentUser;
+
+                              String? createdBy;
+                              String? createdByUid;
+
+                              if (widget.notice == null) {
+                                createdBy = await getCurrentUserName();
+                                createdByUid = currentUser?.uid;
+                              } else {
+                                createdBy = widget.notice!.createdBy;
+                                createdByUid = widget.notice!.createdByUid;
+                              }
+
                               final noticeData = Notice(
                                 title: _titleController.text.trim(),
                                 description: _descController.text.trim(),
                                 recipients: recipients,
                                 attachmentUrls: attachmentUrls,
+                                createdBy: createdBy,
+                                pinned: pinned,
                               );
 
                               if (widget.notice == null) {

@@ -47,7 +47,11 @@ dependencies:
   path_provider: ^2.1.6
   share_plus: ^12.0.2
   geolocator: ^14.0.2
+<<<<<<< HEAD
   flutter_local_notifications: ^22.2.0
+=======
+  google_sign_in: ^7.2.0
+>>>>>>> 0e44960 (Add Google authentication and improve notice functionality)
 share_plus: ^12.0.2
 geolocator: ^14.0.2
 
