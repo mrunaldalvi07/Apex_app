@@ -6,8 +6,7 @@ import 'package:path_provider/path_provider.dart';
 import 'package:share_plus/share_plus.dart';
 
 class AttendanceExportService {
-  final FirebaseFirestore firestore =
-      FirebaseFirestore.instance;
+  final FirebaseFirestore firestore = FirebaseFirestore.instance;
 
   Future<void> exportAttendanceSheet({
     required String branch,
@@ -15,7 +14,6 @@ class AttendanceExportService {
     required String course,
     required String month,
   }) async {
-
     // -----------------------------
     // Get Students
     // -----------------------------
@@ -56,17 +54,14 @@ class AttendanceExportService {
       'December',
     ];
 
-    final List<QueryDocumentSnapshot<Map<String, dynamic>>>
-        sessionDocs = [];
+    final List<QueryDocumentSnapshot<Map<String, dynamic>>> sessionDocs = [];
 
     for (final session in sessions.docs) {
-      final Timestamp? timestamp =
-          session.data()['createdAt'] as Timestamp?;
+      final Timestamp? timestamp = session.data()['createdAt'] as Timestamp?;
 
       if (timestamp == null) continue;
 
-      final sessionMonth =
-          monthNames[timestamp.toDate().month];
+      final sessionMonth = monthNames[timestamp.toDate().month];
 
       if (sessionMonth == month) {
         sessionDocs.add(session);
@@ -80,26 +75,19 @@ class AttendanceExportService {
       final Timestamp ta = a['createdAt'];
       final Timestamp tb = b['createdAt'];
 
-      return ta.toDate().compareTo(
-        tb.toDate(),
-      );
+      return ta.toDate().compareTo(tb.toDate());
     });
     // -----------------------------
     // Create / Open Excel File
     // -----------------------------
-    final directory =
-        await getApplicationDocumentsDirectory();
+    final directory = await getApplicationDocumentsDirectory();
 
-    final file = File(
-      "${directory.path}/${year}_${branch}_${course}.xlsx",
-    );
+    final file = File("${directory.path}/${year}_${branch}_${course}.xlsx");
 
     Excel excel;
 
     if (await file.exists()) {
-      excel = Excel.decodeBytes(
-        await file.readAsBytes(),
-      );
+      excel = Excel.decodeBytes(await file.readAsBytes());
     } else {
       excel = Excel.createExcel();
 
@@ -141,12 +129,11 @@ class AttendanceExportService {
 
       sheet
           .cell(
-            CellIndex.indexByColumnRow(
-              columnIndex: dateColumn,
-              rowIndex: 0,
-            ),
+            CellIndex.indexByColumnRow(columnIndex: dateColumn, rowIndex: 0),
           )
-          .value = TextCellValue(date);
+          .value = TextCellValue(
+        date,
+      );
 
       dateColumn++;
     }
@@ -155,41 +142,35 @@ class AttendanceExportService {
     // Monthly Summary Columns
     // -----------------------------
     sheet
-        .cell(
-          CellIndex.indexByColumnRow(
-            columnIndex: dateColumn,
-            rowIndex: 0,
-          ),
-        )
-        .value = TextCellValue("Present");
+        .cell(CellIndex.indexByColumnRow(columnIndex: dateColumn, rowIndex: 0))
+        .value = TextCellValue(
+      "Present",
+    );
 
     sheet
         .cell(
-          CellIndex.indexByColumnRow(
-            columnIndex: dateColumn + 1,
-            rowIndex: 0,
-          ),
+          CellIndex.indexByColumnRow(columnIndex: dateColumn + 1, rowIndex: 0),
         )
-        .value = TextCellValue("Absent");
+        .value = TextCellValue(
+      "Absent",
+    );
 
     sheet
         .cell(
-          CellIndex.indexByColumnRow(
-            columnIndex: dateColumn + 2,
-            rowIndex: 0,
-          ),
+          CellIndex.indexByColumnRow(columnIndex: dateColumn + 2, rowIndex: 0),
         )
-        .value = TextCellValue("Attendance %");
+        .value = TextCellValue(
+      "Attendance %",
+    );
 
     sheet
         .cell(
-          CellIndex.indexByColumnRow(
-            columnIndex: dateColumn + 3,
-            rowIndex: 0,
-          ),
+          CellIndex.indexByColumnRow(columnIndex: dateColumn + 3, rowIndex: 0),
         )
-        .value = TextCellValue("Status");
-        // -----------------------------
+        .value = TextCellValue(
+      "Status",
+    );
+    // -----------------------------
     // Sort Students by Roll Number
     // -----------------------------
     final studentDocs = students.docs.toList();
@@ -211,12 +192,8 @@ class AttendanceExportService {
 
       sheet.appendRow([
         TextCellValue(srNo.toString()),
-        TextCellValue(
-          (studentData['rollNo'] ?? '').toString(),
-        ),
-        TextCellValue(
-          (studentData['name'] ?? '').toString(),
-        ),
+        TextCellValue((studentData['rollNo'] ?? '').toString()),
+        TextCellValue((studentData['name'] ?? '').toString()),
       ]);
 
       int column = 3;
@@ -235,12 +212,9 @@ class AttendanceExportService {
         String mark = "A";
 
         if (attendanceDoc.exists) {
-          final attendance =
-              attendanceDoc.data();
+          final attendance = attendanceDoc.data();
 
-          if (attendance != null &&
-              attendance['status'] ==
-                  'Present') {
+          if (attendance != null && attendance['status'] == 'Present') {
             mark = "P";
             present++;
           } else {
@@ -252,48 +226,34 @@ class AttendanceExportService {
 
         sheet
             .cell(
-              CellIndex.indexByColumnRow(
-                columnIndex: column,
-                rowIndex: row,
-              ),
+              CellIndex.indexByColumnRow(columnIndex: column, rowIndex: row),
             )
-            .value = TextCellValue(mark);
+            .value = TextCellValue(
+          mark,
+        );
 
         column++;
       }
 
-      final totalClasses =
-          sessionDocs.length;
+      final totalClasses = sessionDocs.length;
 
       double percentage = 0;
 
       if (totalClasses > 0) {
-        percentage =
-            (present / totalClasses) * 100;
+        percentage = (present / totalClasses) * 100;
       }
 
-      final status =
-          percentage >= 75
-              ? "Regular"
-              : "Detained";
+      final status = percentage >= 75 ? "Regular" : "Detained";
 
       sheet
-          .cell(
-            CellIndex.indexByColumnRow(
-              columnIndex: column,
-              rowIndex: row,
-            ),
-          )
+          .cell(CellIndex.indexByColumnRow(columnIndex: column, rowIndex: row))
           .value = TextCellValue(
         present.toString(),
       );
 
       sheet
           .cell(
-            CellIndex.indexByColumnRow(
-              columnIndex: column + 1,
-              rowIndex: row,
-            ),
+            CellIndex.indexByColumnRow(columnIndex: column + 1, rowIndex: row),
           )
           .value = TextCellValue(
         absent.toString(),
@@ -301,10 +261,7 @@ class AttendanceExportService {
 
       sheet
           .cell(
-            CellIndex.indexByColumnRow(
-              columnIndex: column + 2,
-              rowIndex: row,
-            ),
+            CellIndex.indexByColumnRow(columnIndex: column + 2, rowIndex: row),
           )
           .value = TextCellValue(
         percentage.toStringAsFixed(2),
@@ -312,285 +269,192 @@ class AttendanceExportService {
 
       sheet
           .cell(
-            CellIndex.indexByColumnRow(
-              columnIndex: column + 3,
-              rowIndex: row,
-            ),
+            CellIndex.indexByColumnRow(columnIndex: column + 3, rowIndex: row),
           )
-          .value = TextCellValue(status);
+          .value = TextCellValue(
+        status,
+      );
 
       srNo++;
       row++;
     }
     // =====================================================
-// PART 4A
-// CREATE OVERALL SUMMARY SHEET
-// =====================================================
+    // PART 4A
+    // CREATE OVERALL SUMMARY SHEET
+    // =====================================================
 
-final summarySheet =
-    excel['Overall Summary'];
+    final summarySheet = excel['Overall Summary'];
 
+    // -----------------------------
+    // Summary Title
+    // -----------------------------
 
-// -----------------------------
-// Summary Title
-// -----------------------------
-
-summarySheet.merge(
-  CellIndex.indexByString("A1"),
-  CellIndex.indexByString("J1"),
-);
-
-summarySheet
-    .cell(
+    summarySheet.merge(
       CellIndex.indexByString("A1"),
-    )
-    .value =
-    TextCellValue(
+      CellIndex.indexByString("J1"),
+    );
+
+    summarySheet.cell(CellIndex.indexByString("A1")).value = TextCellValue(
       "$course - Overall Attendance Summary",
     );
 
+    // -----------------------------
+    // Header Row
+    // -----------------------------
 
-// -----------------------------
-// Header Row
-// -----------------------------
+    summarySheet.appendRow([
+      TextCellValue("Sr No"),
+      TextCellValue("Roll No"),
+      TextCellValue("Student Name"),
+      TextCellValue("Total Classes"),
+      TextCellValue("Present"),
+      TextCellValue("Absent"),
+      TextCellValue("Attendance %"),
+      TextCellValue("Status"),
+      TextCellValue("Month Wise Details"),
+      TextCellValue("Remarks"),
+    ]);
 
-summarySheet.appendRow([
-  TextCellValue("Sr No"),
-  TextCellValue("Roll No"),
-  TextCellValue("Student Name"),
-  TextCellValue("Total Classes"),
-  TextCellValue("Present"),
-  TextCellValue("Absent"),
-  TextCellValue("Attendance %"),
-  TextCellValue("Status"),
-  TextCellValue("Month Wise Details"),
-  TextCellValue("Remarks"),
-]);
+    // -----------------------------
+    // Header Styling
+    // -----------------------------
 
-
-// -----------------------------
-// Header Styling
-// -----------------------------
-
-for(int i = 0; i < 10; i++){
-
-  summarySheet
-      .cell(
-        CellIndex.indexByColumnRow(
-          columnIndex: i,
-          rowIndex: 1,
-        ),
-      )
-      .cellStyle =
-      CellStyle(
+    for (int i = 0; i < 10; i++) {
+      summarySheet
+          .cell(CellIndex.indexByColumnRow(columnIndex: i, rowIndex: 1))
+          .cellStyle = CellStyle(
         bold: true,
-        horizontalAlign:
-            HorizontalAlign.Center,
+        horizontalAlign: HorizontalAlign.Center,
       );
-}
+    }
 
+    // -----------------------------
+    // Set Column Width
+    // -----------------------------
 
-// -----------------------------
-// Set Column Width
-// -----------------------------
+    summarySheet.setColumnWidth(0, 8);
 
-summarySheet.setColumnWidth(
-    0, 8);
+    summarySheet.setColumnWidth(1, 15);
 
-summarySheet.setColumnWidth(
-    1, 15);
+    summarySheet.setColumnWidth(2, 25);
 
-summarySheet.setColumnWidth(
-    2, 25);
+    summarySheet.setColumnWidth(3, 15);
 
-summarySheet.setColumnWidth(
-    3, 15);
+    summarySheet.setColumnWidth(4, 12);
 
-summarySheet.setColumnWidth(
-    4, 12);
+    summarySheet.setColumnWidth(5, 12);
 
-summarySheet.setColumnWidth(
-    5, 12);
+    summarySheet.setColumnWidth(6, 15);
 
-summarySheet.setColumnWidth(
-    6, 15);
+    summarySheet.setColumnWidth(7, 15);
 
-summarySheet.setColumnWidth(
-    7, 15);
+    summarySheet.setColumnWidth(8, 30);
 
-summarySheet.setColumnWidth(
-    8, 30);
-
-summarySheet.setColumnWidth(
-    9, 20);
+    summarySheet.setColumnWidth(9, 20);
     // =====================================================
-// PART 4B
-// READ MONTHLY SHEETS AND CALCULATE TOTALS
-// =====================================================
+    // PART 4B
+    // READ MONTHLY SHEETS AND CALCULATE TOTALS
+    // =====================================================
 
+    // -----------------------------
+    // Month Sheet Names
+    // -----------------------------
 
-// -----------------------------
-// Month Sheet Names
-// -----------------------------
+    final months = [
+      "January",
+      "February",
+      "March",
+      "April",
+      "May",
+      "June",
+      "July",
+      "August",
+      "September",
+      "October",
+      "November",
+      "December",
+    ];
 
-final months = [
-  "January",
-  "February",
-  "March",
-  "April",
-  "May",
-  "June",
-  "July",
-  "August",
-  "September",
-  "October",
-  "November",
-  "December",
-];
+    // -----------------------------
+    // Fetch Students Again
+    // -----------------------------
 
-
-// -----------------------------
-// Fetch Students Again
-// -----------------------------
-
-final studentsSnapshot =
-    await firestore
+    final studentsSnapshot = await firestore
         .collection('users')
-        .where(
-          'branch',
-          isEqualTo: branch,
-        )
-        .where(
-          'year',
-          isEqualTo: year,
-        )
-        .where(
-          'role',
-          isEqualTo: 'student',
-        )
+        .where('branch', isEqualTo: branch)
+        .where('year', isEqualTo: year)
+        .where('role', isEqualTo: 'student')
         .get();
 
+    final summaryStudents = studentsSnapshot.docs.toList();
 
-final summaryStudents =
-    studentsSnapshot.docs.toList();
+    // Sort by Roll Number
 
+    summaryStudents.sort((a, b) {
+      final rollA = (a['rollNo'] ?? '').toString();
 
-// Sort by Roll Number
+      final rollB = (b['rollNo'] ?? '').toString();
 
-summaryStudents.sort((a,b){
+      return rollA.compareTo(rollB);
+    });
 
-  final rollA =
-      (a['rollNo'] ?? '').toString();
+    // -----------------------------
+    // Process Each Student
+    // -----------------------------
 
-  final rollB =
-      (b['rollNo'] ?? '').toString();
+    int summarySrNo = 1;
 
-  return rollA.compareTo(rollB);
+    for (final student in summaryStudents) {
+      final studentData = student.data();
 
-});
+      int totalClasses = 0;
+      int totalPresent = 0;
+      int totalAbsent = 0;
 
+      List<String> monthDetails = [];
 
+      // -----------------------------
+      // Read Every Month Sheet
+      // -----------------------------
 
-// -----------------------------
-// Process Each Student
-// -----------------------------
+      for (final month in months) {
+        if (!excel.sheets.containsKey(month)) {
+          continue;
+        }
 
+        final monthSheet = excel[month];
 
-int summaryRow = 2;
-int summarySrNo = 1;
+        int lastRow = monthSheet.maxRows;
 
+        int studentRow = -1;
 
-for(final student in summaryStudents){
+        // Find Student Row
 
-  final studentData =
-      student.data();
-
-
-  int totalClasses = 0;
-  int totalPresent = 0;
-  int totalAbsent = 0;
-
-
-  List<String> monthDetails = [];
-
-
-
-  // -----------------------------
-  // Read Every Month Sheet
-  // -----------------------------
-
-  for(final month in months){
-
-
-    if(!excel.sheets.containsKey(month)){
-      continue;
-    }
-
-
-    final monthSheet =
-        excel[month];
-
-
-    int lastRow =
-        monthSheet.maxRows;
-
-
-    int studentRow = -1;
-
-
-
-    // Find Student Row
-
-    for(int r = 2; r <= lastRow; r++){
-
-
-      final rollCell =
-          monthSheet
-              .cell(
-                CellIndex.indexByColumnRow(
-                  columnIndex: 1,
-                  rowIndex: r,
-                ),
-              )
+        for (int r = 2; r <= lastRow; r++) {
+          final rollCell = monthSheet
+              .cell(CellIndex.indexByColumnRow(columnIndex: 1, rowIndex: r))
               .value;
 
+          if (rollCell != null &&
+              rollCell.toString().contains(
+                (studentData['rollNo'] ?? '').toString(),
+              )) {
+            studentRow = r;
+            break;
+          }
+        }
 
-      if(
-        rollCell != null &&
-        rollCell
-            .toString()
-            .contains(
-              (studentData['rollNo'] ?? '')
-                  .toString()
-            )
-      ){
+        if (studentRow == -1) {
+          continue;
+        }
 
-        studentRow = r;
-        break;
-      }
+        int monthPresent = 0;
+        int monthAbsent = 0;
 
-    }
+        // Attendance Columns Start From Column 4
 
-
-
-    if(studentRow == -1){
-      continue;
-    }
-
-
-
-    int monthPresent = 0;
-    int monthAbsent = 0;
-
-
-
-    // Attendance Columns Start From Column 4
-
-    for(int c = 3; c < 50; c++){
-
-
-      final value =
-          monthSheet
+        for (int c = 3; c < 50; c++) {
+          final value = monthSheet
               .cell(
                 CellIndex.indexByColumnRow(
                   columnIndex: c,
@@ -599,233 +463,129 @@ for(final student in summaryStudents){
               )
               .value;
 
+          if (value == null) {
+            continue;
+          }
 
-      if(value == null){
-        continue;
+          String mark = value.toString();
+
+          if (mark == "P") {
+            totalPresent++;
+            monthPresent++;
+          } else if (mark == "A") {
+            totalAbsent++;
+            monthAbsent++;
+          }
+
+          if (mark == "P" || mark == "A") {
+            totalClasses++;
+          }
+        }
+
+        if (monthPresent + monthAbsent > 0) {
+          monthDetails.add("$month : P=$monthPresent A=$monthAbsent");
+        }
       }
 
+      // -----------------------------
+      // Calculate Percentage
+      // -----------------------------
 
-      String mark =
-          value.toString();
+      double percentage = 0;
 
-
-      if(mark == "P"){
-
-        totalPresent++;
-        monthPresent++;
-
-      }
-      else if(mark == "A"){
-
-        totalAbsent++;
-        monthAbsent++;
-
+      if (totalClasses > 0) {
+        percentage = (totalPresent / totalClasses) * 100;
       }
 
+      String status = percentage >= 75 ? "Regular" : "Detained";
 
-      if(mark == "P" || mark == "A"){
-        totalClasses++;
-      }
+      // Data storage for Part 4C
 
+      summarySheet.appendRow([
+        TextCellValue(summarySrNo.toString()),
+
+        TextCellValue((studentData['rollNo'] ?? '').toString()),
+
+        TextCellValue((studentData['name'] ?? '').toString()),
+
+        TextCellValue(totalClasses.toString()),
+
+        TextCellValue(totalPresent.toString()),
+
+        TextCellValue(totalAbsent.toString()),
+
+        TextCellValue(percentage.toStringAsFixed(2)),
+
+        TextCellValue(status),
+
+        TextCellValue(monthDetails.join("\n")),
+
+        TextCellValue(""),
+      ]);
+
+      summarySrNo++;
     }
+    // =====================================================
+    // PART 4C
+    // FORMAT, SAVE AND SHARE EXCEL FILE
+    // =====================================================
 
+    // -----------------------------
+    // Overall Summary Formatting
+    // -----------------------------
 
-
-    if(monthPresent + monthAbsent > 0){
-
-      monthDetails.add(
-        "$month : P=$monthPresent A=$monthAbsent"
-      );
-
-    }
-
-  }
-
-
-
-  // -----------------------------
-  // Calculate Percentage
-  // -----------------------------
-
-
-  double percentage = 0;
-
-
-  if(totalClasses > 0){
-
-    percentage =
-        (totalPresent / totalClasses) * 100;
-
-  }
-
-
-
-  String status =
-      percentage >= 75
-          ? "Regular"
-          : "Detained";
-
-
-
-  // Data storage for Part 4C
-
-  summarySheet.appendRow([
-
-    TextCellValue(
-      summarySrNo.toString(),
-    ),
-
-    TextCellValue(
-      (studentData['rollNo'] ?? '')
-          .toString(),
-    ),
-
-    TextCellValue(
-      (studentData['name'] ?? '')
-          .toString(),
-    ),
-
-    TextCellValue(
-      totalClasses.toString(),
-    ),
-
-    TextCellValue(
-      totalPresent.toString(),
-    ),
-
-    TextCellValue(
-      totalAbsent.toString(),
-    ),
-
-    TextCellValue(
-      percentage
-          .toStringAsFixed(2),
-    ),
-
-    TextCellValue(
-      status,
-    ),
-
-    TextCellValue(
-      monthDetails.join("\n"),
-    ),
-
-    TextCellValue(
-      "",
-    ),
-
-  ]);
-
-
-
-  summarySrNo++;
-  summaryRow++;
-
-}
-// =====================================================
-// PART 4C
-// FORMAT, SAVE AND SHARE EXCEL FILE
-// =====================================================
-
-
-// -----------------------------
-// Overall Summary Formatting
-// -----------------------------
-
-for(int i = 0; i < 10; i++){
-
-  summarySheet
-      .cell(
-        CellIndex.indexByColumnRow(
-          columnIndex: i,
-          rowIndex: 1,
-        ),
-      )
-      .cellStyle = CellStyle(
+    for (int i = 0; i < 10; i++) {
+      summarySheet
+          .cell(CellIndex.indexByColumnRow(columnIndex: i, rowIndex: 1))
+          .cellStyle = CellStyle(
         bold: true,
-        horizontalAlign:
-            HorizontalAlign.Center,
-        verticalAlign:
-            VerticalAlign.Center,
+        horizontalAlign: HorizontalAlign.Center,
+        verticalAlign: VerticalAlign.Center,
       );
+    }
 
-}
+    // -----------------------------
+    // Apply Row Height
+    // -----------------------------
 
+    summarySheet.setRowHeight(0, 25);
 
+    summarySheet.setRowHeight(1, 22);
 
-// -----------------------------
-// Apply Row Height
-// -----------------------------
+    // -----------------------------
+    // Generate Excel Bytes
+    // -----------------------------
 
-summarySheet.setRowHeight(
-    0, 25);
+    final excelBytes = excel.encode();
 
-summarySheet.setRowHeight(
-    1, 22);
+    if (excelBytes == null) {
+      throw Exception("Excel generation failed");
+    }
 
+    // -----------------------------
+    // Create File Path
+    // -----------------------------
 
-// -----------------------------
-// Generate Excel Bytes
-// -----------------------------
+    final saveDirectory = await getApplicationDocumentsDirectory();
 
-final excelBytes =
-    excel.encode();
+    final filePath =
+        "${saveDirectory.path}/"
+        "${course}_Attendance_Report.xlsx";
 
+    final reportFile = File(filePath);
 
+    // -----------------------------
+    // Write Excel File
+    // -----------------------------
 
-if(excelBytes == null){
+    await reportFile.writeAsBytes(excelBytes, flush: true);
 
-  throw Exception(
-      "Excel generation failed");
+    // -----------------------------
+    // Share File
+    // -----------------------------
 
-}
-
-
-
-// -----------------------------
-// Create File Path
-// -----------------------------
-
-final saveDirectory =
-    await getApplicationDocumentsDirectory();
-
-
-final filePath =
-    "${saveDirectory.path}/"
-    "${course}_Attendance_Report.xlsx";
-
-
-
-final reportFile =
-    File(filePath);
-
-
-
-// -----------------------------
-// Write Excel File
-// -----------------------------
-
-await reportFile.writeAsBytes(
-  excelBytes,
-  flush: true,
-);
-
-
-
-// -----------------------------
-// Share File
-// -----------------------------
-
-await Share.shareXFiles(
-  [
-    XFile(
-      reportFile.path,
-    ),
-  ],
-
-  text:
-      "$course Attendance Report",
-
-);
+    await Share.shareXFiles([
+      XFile(reportFile.path),
+    ], text: "$course Attendance Report");
   }
 }

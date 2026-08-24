@@ -3,7 +3,6 @@ import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 
 import '../auth/login_screen.dart';
-import '../screens/complaint_list_screen.dart';
 import '../screens/attendance_management_screen.dart';
 import '../screens/classroom_management_screen.dart';
 import '../screens/admin_notice_screen.dart';
@@ -79,7 +78,7 @@ class AdminDashboard extends StatelessWidget {
               context,
               Icons.report_problem,
               "Complaint\nManagement",
-              Colors.red,
+              const Color.fromARGB(255, 134, 99, 182),
               () {
                 Navigator.push(
                   context,

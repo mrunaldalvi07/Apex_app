@@ -1,6 +1,5 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import '../models/notice.dart';
-import '../models/user.dart';
 
 class NoticeService {
   static final FirebaseFirestore _db = FirebaseFirestore.instance;

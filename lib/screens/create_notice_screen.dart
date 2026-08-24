@@ -46,19 +46,13 @@ class _CreateNoticeScreenState extends State<CreateNoticeScreen> {
   }
 
   Future<void> pickFiles() async {
-    FilePickerResult? result = await FilePicker.pickFiles(allowMultiple: true);
+    List<PlatformFile> files = await FilePicker.pickFiles();
 
-    if (result != null) {
-      print(result.files.length);
+    if (files.isNotEmpty) {
+      print(files.length);
       setState(() {
-        selectedFiles.addAll(result.files);
+        selectedFiles.addAll(files);
       });
-    }
-
-    if (widget.notice != null) {
-      selectedFiles = widget.notice!.attachmentUrls
-          .map((name) => PlatformFile(name: name, size: 0))
-          .toList();
     }
   }
 

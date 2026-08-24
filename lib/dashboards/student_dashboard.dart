@@ -82,7 +82,8 @@ class StudentDashboard extends StatelessWidget {
               context,
               Icons.report_problem,
               "Complaint\nManagement",
-              Colors.red,
+              const Color.fromRGBO(134, 99, 182, 1),
+
               () {
                 Navigator.push(
                   context,
