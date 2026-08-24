@@ -82,7 +82,7 @@ class AttendanceExportService {
     // -----------------------------
     final directory = await getApplicationDocumentsDirectory();
 
-    final file = File("${directory.path}/${year}_${branch}_${course}.xlsx");
+    final file = File("${directory.path}/${year}_${branch}_$course.xlsx");
 
     Excel excel;
 
@@ -584,8 +584,11 @@ class AttendanceExportService {
     // Share File
     // -----------------------------
 
-    await Share.shareXFiles([
-      XFile(reportFile.path),
-    ], text: "$course Attendance Report");
+    await SharePlus.instance.share(
+      ShareParams(
+        files: [XFile(reportFile.path)],
+        text: "$course Attendance Report",
+      ),
+    );
   }
 }

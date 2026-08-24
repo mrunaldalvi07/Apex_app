@@ -31,9 +31,11 @@ class _LoginScreenState extends State<LoginScreen> {
         password: passwordController.text.trim(),
       );
 
-      if (!mounted) return;
+      if (!context.mounted) return;
 
       await FCMService().initialize();
+
+      if (!mounted) return;
 
       Navigator.pushReplacement(
         context,

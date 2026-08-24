@@ -18,10 +18,7 @@ class _LoginScreenState extends State<LoginScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: const Text("Role Selection"),
-        centerTitle: true,
-      ),
+      appBar: AppBar(title: const Text("Role Selection"), centerTitle: true),
       body: Padding(
         padding: const EdgeInsets.all(20),
         child: Column(
@@ -30,56 +27,35 @@ class _LoginScreenState extends State<LoginScreen> {
 
             const Text(
               "APEX Classroom Scheduler",
-              style: TextStyle(
-                fontSize: 28,
-                fontWeight: FontWeight.bold,
-              ),
+              style: TextStyle(fontSize: 28, fontWeight: FontWeight.bold),
             ),
 
             const SizedBox(height: 40),
 
-            RadioListTile<String>(
-              title: const Text("Student"),
-              value: "student",
+            RadioGroup<String>(
               groupValue: selectedRole,
               onChanged: (value) {
                 setState(() {
                   selectedRole = value!;
                 });
               },
-            ),
-
-            RadioListTile<String>(
-              title: const Text("Faculty"),
-              value: "faculty",
-              groupValue: selectedRole,
-              onChanged: (value) {
-                setState(() {
-                  selectedRole = value!;
-                });
-              },
-            ),
-
-            RadioListTile<String>(
-              title: const Text("CR"),
-              value: "cr",
-              groupValue: selectedRole,
-              onChanged: (value) {
-                setState(() {
-                  selectedRole = value!;
-                });
-              },
-            ),
-
-            RadioListTile<String>(
-              title: const Text("Admin"),
-              value: "admin",
-              groupValue: selectedRole,
-              onChanged: (value) {
-                setState(() {
-                  selectedRole = value!;
-                });
-              },
+              child: Column(
+                children: [
+                  const RadioListTile<String>(
+                    title: Text("Student"),
+                    value: "student",
+                  ),
+                  const RadioListTile<String>(
+                    title: Text("Faculty"),
+                    value: "faculty",
+                  ),
+                  const RadioListTile<String>(title: Text("CR"), value: "cr"),
+                  const RadioListTile<String>(
+                    title: Text("Admin"),
+                    value: "admin",
+                  ),
+                ],
+              ),
             ),
 
             const Spacer(),
@@ -89,7 +65,6 @@ class _LoginScreenState extends State<LoginScreen> {
               height: 50,
               child: ElevatedButton(
                 onPressed: () {
-
                   Widget nextScreen;
 
                   switch (selectedRole) {
@@ -115,17 +90,12 @@ class _LoginScreenState extends State<LoginScreen> {
 
                   Navigator.pushReplacement(
                     context,
-                    MaterialPageRoute(
-                      builder: (_) => nextScreen,
-                    ),
+                    MaterialPageRoute(builder: (_) => nextScreen),
                   );
                 },
                 child: const Text(
                   "CONTINUE",
-                  style: TextStyle(
-                    fontSize: 18,
-                    fontWeight: FontWeight.bold,
-                  ),
+                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
                 ),
               ),
             ),

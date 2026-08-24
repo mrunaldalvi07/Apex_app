@@ -12,37 +12,27 @@ class BookingFormScreen extends StatefulWidget {
   });
 
   @override
-  State<BookingFormScreen> createState() =>
-      _BookingFormScreenState();
+  State<BookingFormScreen> createState() => _BookingFormScreenState();
 }
 
-class _BookingFormScreenState
-    extends State<BookingFormScreen> {
-  final TextEditingController courseController =
-      TextEditingController();
+class _BookingFormScreenState extends State<BookingFormScreen> {
+  final TextEditingController courseController = TextEditingController();
 
-  final TextEditingController facultyController =
-      TextEditingController();
+  final TextEditingController facultyController = TextEditingController();
 
-  final TextEditingController timeSlotController =
-      TextEditingController();
+  final TextEditingController timeSlotController = TextEditingController();
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: const Text("Book Classroom"),
-      ),
+      appBar: AppBar(title: const Text("Book Classroom")),
       body: Padding(
         padding: const EdgeInsets.all(20),
         child: Column(
           children: [
             Text(
               "Room Number: ${widget.roomNo}",
-              style: const TextStyle(
-                fontSize: 20,
-                fontWeight: FontWeight.bold,
-              ),
+              style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
             ),
 
             const SizedBox(height: 20),
@@ -85,12 +75,8 @@ class _BookingFormScreenState
                   if (courseController.text.isEmpty ||
                       facultyController.text.isEmpty ||
                       timeSlotController.text.isEmpty) {
-                    ScaffoldMessenger.of(context)
-                        .showSnackBar(
-                      const SnackBar(
-                        content:
-                            Text("Please fill all fields"),
-                      ),
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(content: Text("Please fill all fields")),
                     );
 
                     return;
@@ -100,29 +86,24 @@ class _BookingFormScreenState
                       .collection('classrooms')
                       .doc(widget.documentId)
                       .update({
-                    'course': courseController.text,
-                    'facultyName':
-                        facultyController.text,
-                    'timeSlot':
-                        timeSlotController.text,
-                    'status': 'BOOKED',
-                  });
+                        'course': courseController.text,
+                        'facultyName': facultyController.text,
+                        'timeSlot': timeSlotController.text,
+                        'status': 'BOOKED',
+                      });
 
-                  ScaffoldMessenger.of(context)
-                      .showSnackBar(
+                  if (!context.mounted) return;
+
+                  ScaffoldMessenger.of(context).showSnackBar(
                     const SnackBar(
-                      content: Text(
-                        "Classroom Booked Successfully",
-                      ),
+                      content: Text("Classroom Booked Successfully"),
                     ),
                   );
 
                   Navigator.pop(context);
                   Navigator.pop(context);
                 },
-                child: const Text(
-                  "BOOK CLASSROOM",
-                ),
+                child: const Text("BOOK CLASSROOM"),
               ),
             ),
           ],

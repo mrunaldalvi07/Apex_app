@@ -1,3 +1,5 @@
+import 'dart:developer' as developer;
+
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:google_sign_in/google_sign_in.dart';
 
@@ -29,15 +31,21 @@ class AuthService {
 
       return await _auth.signInWithCredential(credential);
     } on GoogleSignInException catch (e) {
-      print('GOOGLE ERROR CODE: ${e.code}');
-      print('GOOGLE ERROR DESCRIPTION: ${e.description}');
+      developer.log('Google error code: ${e.code}', name: 'AuthService');
+      developer.log(
+        'Google error description: ${e.description}',
+        name: 'AuthService',
+      );
       rethrow;
     } on FirebaseAuthException catch (e) {
-      print('FIREBASE ERROR CODE: ${e.code}');
-      print('FIREBASE ERROR MESSAGE: ${e.message}');
+      developer.log('Firebase error code: ${e.code}', name: 'AuthService');
+      developer.log(
+        'Firebase error message: ${e.message}',
+        name: 'AuthService',
+      );
       rethrow;
     } catch (e) {
-      print('OTHER GOOGLE ERROR: $e');
+      developer.log('Other Google error: $e', name: 'AuthService');
       rethrow;
     }
   }

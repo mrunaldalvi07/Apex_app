@@ -49,7 +49,7 @@ class _CreateNoticeScreenState extends State<CreateNoticeScreen> {
     List<PlatformFile> files = await FilePicker.pickFiles();
 
     if (files.isNotEmpty) {
-      print(files.length);
+      debugPrint('Selected ${files.length} file(s).');
       setState(() {
         selectedFiles.addAll(files);
       });
@@ -329,8 +329,8 @@ class _CreateNoticeScreenState extends State<CreateNoticeScreen> {
                                                 ),
                                                 tooltip: "View File",
                                                 onPressed: () async {
-                                                  print(file.name);
-                                                  print(file.path);
+                                                  debugPrint(file.name);
+                                                  debugPrint(file.path);
                                                 },
                                               ),
 
@@ -409,7 +409,7 @@ class _CreateNoticeScreenState extends State<CreateNoticeScreen> {
                                   noticeData,
                                 );
                               }
-                              if (!mounted) return;
+                              if (!context.mounted) return;
                               Navigator.pop(context);
                             }
                           },

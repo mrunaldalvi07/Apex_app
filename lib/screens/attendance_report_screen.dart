@@ -8,31 +8,21 @@ class AttendanceReportScreen extends StatefulWidget {
   const AttendanceReportScreen({super.key});
 
   @override
-  State<AttendanceReportScreen> createState() =>
-      _AttendanceReportScreenState();
+  State<AttendanceReportScreen> createState() => _AttendanceReportScreenState();
 }
 
-class _AttendanceReportScreenState
-    extends State<AttendanceReportScreen> {
+class _AttendanceReportScreenState extends State<AttendanceReportScreen> {
   String selectedBranch = "IT";
   String selectedYear = "1";
   String selectedMonth = "January";
 
   bool loading = false;
 
-  final TextEditingController courseController =
-      TextEditingController();
+  final TextEditingController courseController = TextEditingController();
 
-  final List<String> branches = [
-    "IT",
-    "CM",
-  ];
+  final List<String> branches = ["IT", "CM"];
 
-  final List<String> years = [
-    "1",
-    "2",
-    "3",
-  ];
+  final List<String> years = ["1", "2", "3"];
 
   final List<String> months = [
     "January",
@@ -51,8 +41,7 @@ class _AttendanceReportScreenState
 
   Future<void> generateSheet() async {
     try {
-      final course =
-          courseController.text.trim().toUpperCase();
+      final course = courseController.text.trim().toUpperCase();
 
       if (course.isEmpty) {
         throw Exception("Enter Course Name");
@@ -62,8 +51,7 @@ class _AttendanceReportScreenState
         loading = true;
       });
 
-      await AttendanceExportService()
-          .exportAttendanceSheet(
+      await AttendanceExportService().exportAttendanceSheet(
         branch: selectedBranch,
         year: selectedYear,
         course: course,
@@ -73,20 +61,14 @@ class _AttendanceReportScreenState
       if (!mounted) return;
 
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text(
-            "Attendance Excel Generated",
-          ),
-        ),
+        const SnackBar(content: Text("Attendance Excel Generated")),
       );
     } catch (e) {
       if (!mounted) return;
 
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(e.toString()),
-        ),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(e.toString())));
     } finally {
       setState(() {
         loading = false;
@@ -106,9 +88,7 @@ class _AttendanceReportScreenState
       child: ElevatedButton.icon(
         icon: Icon(icon),
         label: Text(text),
-        style: ElevatedButton.styleFrom(
-          backgroundColor: color,
-        ),
+        style: ElevatedButton.styleFrom(backgroundColor: color),
         onPressed: onPressed,
       ),
     );
@@ -119,29 +99,23 @@ class _AttendanceReportScreenState
     courseController.dispose();
     super.dispose();
   }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: const Text("Attendance Reports"),
-      ),
+      appBar: AppBar(title: const Text("Attendance Reports")),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(16),
         child: Column(
           children: [
             DropdownButtonFormField<String>(
-              value: selectedBranch,
+              initialValue: (selectedBranch),
               decoration: const InputDecoration(
                 labelText: "Branch",
                 border: OutlineInputBorder(),
               ),
               items: branches
-                  .map(
-                    (e) => DropdownMenuItem(
-                      value: e,
-                      child: Text(e),
-                    ),
-                  )
+                  .map((e) => DropdownMenuItem(value: e, child: Text(e)))
                   .toList(),
               onChanged: (value) {
                 setState(() {
@@ -153,17 +127,14 @@ class _AttendanceReportScreenState
             const SizedBox(height: 15),
 
             DropdownButtonFormField<String>(
-              value: selectedYear,
+              initialValue: (selectedYear),
               decoration: const InputDecoration(
                 labelText: "Year",
                 border: OutlineInputBorder(),
               ),
               items: years
                   .map(
-                    (e) => DropdownMenuItem(
-                      value: e,
-                      child: Text("$e Year"),
-                    ),
+                    (e) => DropdownMenuItem(value: e, child: Text("$e Year")),
                   )
                   .toList(),
               onChanged: (value) {
@@ -177,8 +148,7 @@ class _AttendanceReportScreenState
 
             TextField(
               controller: courseController,
-              textCapitalization:
-                  TextCapitalization.characters,
+              textCapitalization: TextCapitalization.characters,
               decoration: const InputDecoration(
                 labelText: "Course",
                 hintText: "JAVA, DBMS, PYTHON",
@@ -189,17 +159,15 @@ class _AttendanceReportScreenState
             const SizedBox(height: 15),
 
             DropdownButtonFormField<String>(
-              value: selectedMonth,
+              initialValue: (selectedMonth),
               decoration: const InputDecoration(
                 labelText: "Month",
                 border: OutlineInputBorder(),
               ),
               items: months
                   .map(
-                    (month) => DropdownMenuItem(
-                      value: month,
-                      child: Text(month),
-                    ),
+                    (month) =>
+                        DropdownMenuItem(value: month, child: Text(month)),
                   )
                   .toList(),
               onChanged: (value) {
@@ -229,9 +197,7 @@ class _AttendanceReportScreenState
                     builder: (_) => AttendanceSummaryScreen(
                       branch: selectedBranch,
                       year: selectedYear,
-                      course: courseController.text
-                          .trim()
-                          .toUpperCase(),
+                      course: courseController.text.trim().toUpperCase(),
                       month: selectedMonth,
                     ),
                   ),
@@ -251,9 +217,7 @@ class _AttendanceReportScreenState
                     builder: (_) => DetentionListScreen(
                       branch: selectedBranch,
                       year: selectedYear,
-                      course: courseController.text
-                          .trim()
-                          .toUpperCase(),
+                      course: courseController.text.trim().toUpperCase(),
                       month: selectedMonth,
                     ),
                   ),
@@ -269,9 +233,7 @@ class _AttendanceReportScreenState
               onPressed: () {
                 ScaffoldMessenger.of(context).showSnackBar(
                   const SnackBar(
-                    content: Text(
-                      "Open Detention List and tap Notify",
-                    ),
+                    content: Text("Open Detention List and tap Notify"),
                   ),
                 );
               },
@@ -281,9 +243,7 @@ class _AttendanceReportScreenState
 
             buildButton(
               icon: Icons.download,
-              text: loading
-                  ? "Generating..."
-                  : "Export Excel",
+              text: loading ? "Generating..." : "Export Excel",
               onPressed: loading ? () {} : generateSheet,
             ),
 
@@ -295,9 +255,7 @@ class _AttendanceReportScreenState
               onPressed: () {
                 ScaffoldMessenger.of(context).showSnackBar(
                   const SnackBar(
-                    content: Text(
-                      "PDF Export will be added next",
-                    ),
+                    content: Text("PDF Export will be added next"),
                   ),
                 );
               },
