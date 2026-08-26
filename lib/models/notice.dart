@@ -1,52 +1,56 @@
 class Notice {
-  final String? id;
-  final String title;
-  final String description;
-  final List<String> recipients;
-  final List<String> attachmentUrls;
-  final String? createdBy;
-  final DateTime? createdAt;
-  final DateTime? lastUpdated;
+  String? id;
+  String title;
+  String description;
+  String? createdBy;
+  String? createdByUid;
+  DateTime? createdAt;
+  DateTime? lastUpdated;
+  List<String> recipients;
+  List<String> attachmentUrls;
+  bool pinned;
 
   Notice({
     this.id,
     required this.title,
     required this.description,
-    required this.recipients,
-    required this.attachmentUrls,
     this.createdBy,
+    this.createdByUid,
     this.createdAt,
     this.lastUpdated,
+    required this.recipients,
+    required this.attachmentUrls,
+    this.pinned = false,
   });
 
-  // Firestore → Notice
-  factory Notice.fromMap(Map<String, dynamic> map, String docId) {
+  factory Notice.fromMap(Map<String, dynamic> map, String documentId) {
     return Notice(
-      id: docId,
+      id: documentId,
       title: map['title'] ?? '',
       description: map['description'] ?? '',
+      createdBy: map['createdBy'],
+      createdByUid: map['createdByUid'],
+      createdAt: map['createdAt'] != null ? map['createdAt'].toDate() : null,
+      lastUpdated: map['lastUpdated'] != null
+          ? map['lastUpdated'].toDate()
+          : null,
       recipients: List<String>.from(map['recipients'] ?? []),
       attachmentUrls: List<String>.from(map['attachmentUrls'] ?? []),
-      createdBy: map['createdBy'],
-      createdAt: map['createdAt'] != null
-          ? (map['createdAt'] as dynamic).toDate()
-          : null,
-      lastUpdated: map['lastUpdated'] != null
-          ? (map['lastUpdated'] as dynamic).toDate()
-          : null,
+      pinned: map['pinned'] ?? false,
     );
   }
 
-  // Notice → Firestore
   Map<String, dynamic> toMap() {
     return {
       'title': title,
       'description': description,
-      'recipients': recipients,
-      'attachmentUrls': attachmentUrls,
       'createdBy': createdBy,
+      'createdByUid': createdByUid,
       'createdAt': createdAt,
       'lastUpdated': lastUpdated,
+      'recipients': recipients,
+      'attachmentUrls': attachmentUrls,
+      'pinned': pinned,
     };
   }
 }

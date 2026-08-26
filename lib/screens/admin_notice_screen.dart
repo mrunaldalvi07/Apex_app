@@ -4,6 +4,7 @@ import 'notice_details_screen.dart';
 import '../models/notice.dart';
 import '../services/notice_service.dart';
 import 'dart:async';
+import 'package:firebase_auth/firebase_auth.dart';
 
 class AdminNoticeScreen extends StatefulWidget {
   const AdminNoticeScreen({super.key});
@@ -16,6 +17,10 @@ class _AdminNoticeScreenState extends State<AdminNoticeScreen> {
   final TextEditingController _searchController = TextEditingController();
   String searchQuery = "";
   Timer? _debounce;
+  bool showPinnedOnly = false;
+  bool showStarredOnly = false;
+
+  final Map<String, bool> starredStatus = {};
 
   TextSpan highlightText(String text, String query) {
     if (query.isEmpty) {
@@ -68,6 +73,30 @@ class _AdminNoticeScreenState extends State<AdminNoticeScreen> {
     }
   }
 
+  Future<void> loadStarredStatus() async {
+    final user = FirebaseAuth.instance.currentUser;
+
+    if (user == null) return;
+
+    final starredNotices = await NoticeService.getStarredNotices(user.uid);
+
+    if (!mounted) return;
+
+    setState(() {
+      starredStatus.clear();
+
+      for (final noticeId in starredNotices.keys) {
+        starredStatus[noticeId] = true;
+      }
+    });
+  }
+
+  @override
+  void initState() {
+    super.initState();
+    loadStarredStatus();
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -76,15 +105,31 @@ class _AdminNoticeScreenState extends State<AdminNoticeScreen> {
         title: const Text('Notices'),
         actions: [
           IconButton(
-            icon: const Icon(Icons.push_pin),
-            tooltip: "Pin (Coming Soon)",
+            icon: Icon(showStarredOnly ? Icons.star : Icons.star_border),
+            tooltip: showStarredOnly
+                ? "Show All Notices"
+                : "Show Starred Notices",
             onPressed: () {
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(content: Text("Pin feature will be added soon")),
-              );
+              setState(() {
+                showStarredOnly = !showStarredOnly;
+              });
             },
           ),
-          const SizedBox(width: 25),
+          // const SizedBox(width: 25),
+          IconButton(
+            icon: Icon(
+              showPinnedOnly ? Icons.push_pin : Icons.push_pin_outlined,
+            ),
+            tooltip: showPinnedOnly
+                ? "Show All Notices"
+                : "Show Pinned Notices",
+            onPressed: () {
+              setState(() {
+                showPinnedOnly = !showPinnedOnly;
+              });
+            },
+          ),
+          // const SizedBox(width: 25),
           IconButton(
             icon: const Icon(Icons.add),
             onPressed: () {
@@ -94,7 +139,7 @@ class _AdminNoticeScreenState extends State<AdminNoticeScreen> {
               );
             },
           ),
-          const SizedBox(width: 25),
+          const SizedBox(width: 10),
         ],
       ),
 
@@ -136,7 +181,37 @@ class _AdminNoticeScreenState extends State<AdminNoticeScreen> {
               ),
             ),
           ),
+          if (showPinnedOnly || showStarredOnly)
+            Padding(
+              padding: const EdgeInsets.only(
+                left: 16,
+                right: 16,
+                top: 16,
+                bottom: 10,
+              ),
+              child: Row(
+                children: [
+                  const Expanded(child: Divider(thickness: 1)),
 
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 12),
+                    child: Text(
+                      showPinnedOnly && showStarredOnly
+                          ? "Starred & Pinned Notices"
+                          : showPinnedOnly
+                          ? "Pinned Notices"
+                          : "Starred Notices",
+                      style: const TextStyle(
+                        fontSize: 20,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ),
+
+                  const Expanded(child: Divider(thickness: 1)),
+                ],
+              ),
+            ),
           Expanded(
             child: StreamBuilder<List<Notice>>(
               stream: NoticeService.getNotices(),
@@ -152,12 +227,18 @@ class _AdminNoticeScreenState extends State<AdminNoticeScreen> {
                 final notices = snapshot.data!
                     .where(
                       (notice) =>
-                          notice.title.toLowerCase().contains(searchQuery) ||
-                          notice.description.toLowerCase().contains(
-                            searchQuery,
-                          ),
+                          (!showPinnedOnly || notice.pinned) &&
+                          (!showStarredOnly ||
+                              starredStatus[notice.id] == true) &&
+                          (notice.title.toLowerCase().contains(searchQuery) ||
+                              notice.description.toLowerCase().contains(
+                                searchQuery,
+                              )),
                     )
                     .toList();
+
+                // loadStarredStatus(notices);
+
                 if (notices.isEmpty) {
                   return const Center(child: Text("No matching notices found"));
                 }
@@ -167,7 +248,6 @@ class _AdminNoticeScreenState extends State<AdminNoticeScreen> {
                   itemCount: notices.length,
                   itemBuilder: (context, index) {
                     final notice = notices[index];
-
                     return Card(
                       margin: const EdgeInsets.only(bottom: 10),
                       child: InkWell(
@@ -187,6 +267,11 @@ class _AdminNoticeScreenState extends State<AdminNoticeScreen> {
                             children: [
                               Row(
                                 children: [
+                                  if (notice.pinned) ...[
+                                    const Icon(Icons.push_pin, size: 16),
+                                    const SizedBox(width: 4),
+                                  ],
+
                                   Text(
                                     "Notice by: ${notice.createdBy ?? 'Unknown'}",
                                     style: const TextStyle(
@@ -197,6 +282,11 @@ class _AdminNoticeScreenState extends State<AdminNoticeScreen> {
 
                                   const Spacer(),
 
+                                  if (starredStatus[notice.id] == true) ...[
+                                    const Icon(Icons.star, size: 16),
+                                    const SizedBox(width: 4),
+                                  ],
+
                                   Text(
                                     formatDateTime(notice.createdAt),
                                     style: const TextStyle(
@@ -206,7 +296,6 @@ class _AdminNoticeScreenState extends State<AdminNoticeScreen> {
                                   ),
                                 ],
                               ),
-
                               Row(
                                 children: [
                                   Expanded(
@@ -229,6 +318,85 @@ class _AdminNoticeScreenState extends State<AdminNoticeScreen> {
 
                                   PopupMenuButton<String>(
                                     onSelected: (String value) async {
+                                      // ⭐ STAR / UNSTAR
+                                      if (value == "star") {
+                                        final user =
+                                            FirebaseAuth.instance.currentUser;
+
+                                        if (user == null) {
+                                          return;
+                                        }
+
+                                        try {
+                                          await NoticeService.toggleStarNotice(
+                                            notice.id!,
+                                            user.uid,
+                                          );
+
+                                          if (!mounted) return;
+
+                                          setState(() {
+                                            starredStatus[notice.id!] =
+                                                !(starredStatus[notice.id!] ??
+                                                    false);
+                                          });
+                                        } catch (e) {
+                                          if (!mounted) return;
+
+                                          ScaffoldMessenger.of(
+                                            context,
+                                          ).showSnackBar(
+                                            SnackBar(
+                                              content: Text(
+                                                "Failed to update star: $e",
+                                              ),
+                                            ),
+                                          );
+                                        }
+
+                                        return;
+                                      }
+
+                                      // 📌 PIN / UNPIN
+                                      if (value == "pin") {
+                                        try {
+                                          await NoticeService.togglePinNotice(
+                                            notice.id!,
+                                            !notice.pinned,
+                                          );
+                                        } catch (e) {
+                                          if (!mounted) return;
+
+                                          ScaffoldMessenger.of(
+                                            context,
+                                          ).showSnackBar(
+                                            SnackBar(
+                                              content: Text(
+                                                "Failed to update pin: $e",
+                                              ),
+                                            ),
+                                          );
+                                        }
+
+                                        return;
+                                      }
+
+                                      // ✏️ EDIT
+                                      if (value == "edit") {
+                                        Navigator.push(
+                                          context,
+                                          MaterialPageRoute(
+                                            builder: (context) =>
+                                                CreateNoticeScreen(
+                                                  notice: notice,
+                                                ),
+                                          ),
+                                        );
+
+                                        return;
+                                      }
+
+                                      // 🗑️ DELETE
                                       if (value == "delete") {
                                         final confirm = await showDialog<bool>(
                                           context: context,
@@ -271,31 +439,74 @@ class _AdminNoticeScreenState extends State<AdminNoticeScreen> {
 
                                           if (!mounted) return;
                                         }
-                                      } else if (value == "edit") {
-                                        Navigator.push(
-                                          context,
-                                          MaterialPageRoute(
-                                            builder: (context) =>
-                                                CreateNoticeScreen(
-                                                  notice: notice,
-                                                ),
-                                          ),
-                                        );
+
+                                        return;
                                       }
                                     },
 
-                                    itemBuilder: (context) => const [
+                                    itemBuilder: (context) => [
+                                      // ⭐ STAR / UNSTAR
+                                      PopupMenuItem(
+                                        value: "star",
+                                        child: Row(
+                                          children: [
+                                            Icon(
+                                              (starredStatus[notice.id] ??
+                                                      false)
+                                                  ? Icons.star
+                                                  : Icons.star_border,
+                                            ),
+                                            const SizedBox(width: 10),
+                                            Text(
+                                              (starredStatus[notice.id] ??
+                                                      false)
+                                                  ? "Unstar"
+                                                  : "Star",
+                                            ),
+                                          ],
+                                        ),
+                                      ),
+
+                                      // 📌 PIN / UNPIN
                                       PopupMenuItem(
                                         value: "pin",
-                                        child: Text("Pin"),
+                                        child: Row(
+                                          children: [
+                                            Icon(
+                                              notice.pinned
+                                                  ? Icons.push_pin_outlined
+                                                  : Icons.push_pin,
+                                            ),
+                                            const SizedBox(width: 10),
+                                            Text(
+                                              notice.pinned ? "Unpin" : "Pin",
+                                            ),
+                                          ],
+                                        ),
                                       ),
-                                      PopupMenuItem(
+
+                                      // ✏️ EDIT
+                                      const PopupMenuItem(
                                         value: "edit",
-                                        child: Text("Edit"),
+                                        child: Row(
+                                          children: [
+                                            Icon(Icons.edit),
+                                            SizedBox(width: 10),
+                                            Text("Edit"),
+                                          ],
+                                        ),
                                       ),
-                                      PopupMenuItem(
+
+                                      // 🗑️ DELETE
+                                      const PopupMenuItem(
                                         value: "delete",
-                                        child: Text("Delete"),
+                                        child: Row(
+                                          children: [
+                                            Icon(Icons.delete_outline),
+                                            SizedBox(width: 10),
+                                            Text("Delete"),
+                                          ],
+                                        ),
                                       ),
                                     ],
                                   ),
