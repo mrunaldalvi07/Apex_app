@@ -14,17 +14,14 @@ class ComplaintListScreen extends StatefulWidget {
   });
 
   @override
-  State<ComplaintListScreen> createState() =>
-      _ComplaintListScreenState();
+  State<ComplaintListScreen> createState() => _ComplaintListScreenState();
 }
 
-class _ComplaintListScreenState
-    extends State<ComplaintListScreen>
+class _ComplaintListScreenState extends State<ComplaintListScreen>
     with SingleTickerProviderStateMixin {
   late TabController tabController;
 
-  final TextEditingController searchController =
-      TextEditingController();
+  final TextEditingController searchController = TextEditingController();
 
   String searchQuery = '';
   String selectedCategory = 'All';
@@ -32,10 +29,7 @@ class _ComplaintListScreenState
   @override
   void initState() {
     super.initState();
-    tabController = TabController(
-      length: 3,
-      vsync: this,
-    );
+    tabController = TabController(length: 3, vsync: this);
   }
 
   @override
@@ -45,19 +39,122 @@ class _ComplaintListScreenState
     super.dispose();
   }
 
+  Future<void> _showCategoryFilter() async {
+    const categories = [
+      'All',
+      'Infrastructure',
+      'Academic',
+      'Hostel',
+      'Canteen',
+      'Transport',
+      'Other',
+    ];
+
+    final selected = await showModalBottomSheet<String>(
+      context: context,
+      isScrollControlled: true,
+      showDragHandle: true,
+      builder: (sheetContext) => DraggableScrollableSheet(
+        initialChildSize: 0.6,
+        minChildSize: 0.35,
+        maxChildSize: 0.9,
+        expand: false,
+        builder: (context, scrollController) => SafeArea(
+          child: ListView(
+            controller: scrollController,
+            padding: const EdgeInsets.only(bottom: 8),
+            children: [
+              const ListTile(
+                leading: Icon(Icons.filter_alt_rounded),
+                title: Text(
+                  'Filter by category',
+                  style: TextStyle(fontWeight: FontWeight.bold),
+                ),
+              ),
+              ...categories.map(
+                (category) => ListTile(
+                  leading: Icon(
+                    category == 'All'
+                        ? Icons.filter_alt_off_rounded
+                        : Icons.label_outline_rounded,
+                  ),
+                  title: Text(category),
+                  trailing: category == selectedCategory
+                      ? const Icon(Icons.check_rounded)
+                      : null,
+                  onTap: () => Navigator.pop(sheetContext, category),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+
+    if (selected != null && mounted) {
+      setState(() => selectedCategory = selected);
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
         title: const Text('Complaints'),
         centerTitle: true,
-        bottom: TabBar(
-          controller: tabController,
-          tabs: const [
-            Tab(text: 'Pending'),
-            Tab(text: 'In Progress'),
-            Tab(text: 'Resolved'),
-          ],
+        bottom: PreferredSize(
+          preferredSize: const Size.fromHeight(kTextTabBarHeight),
+          child: Container(
+            decoration: BoxDecoration(
+              border: Border(
+                bottom: BorderSide(
+                  color: Theme.of(context).colorScheme.outlineVariant,
+                ),
+              ),
+            ),
+            child: Row(
+              children: [
+                Expanded(
+                  child: TabBar(
+                    controller: tabController,
+                    indicatorSize: TabBarIndicatorSize.label,
+                    dividerColor: Colors.transparent,
+                    tabs: const [
+                      Tab(
+                        icon: Tooltip(
+                          message: 'Pending complaints',
+                          child: Icon(Icons.hourglass_top_rounded),
+                        ),
+                      ),
+                      Tab(
+                        icon: Tooltip(
+                          message: 'Complaints in progress',
+                          child: Icon(Icons.autorenew_rounded),
+                        ),
+                      ),
+                      Tab(
+                        icon: Tooltip(
+                          message: 'Resolved complaints',
+                          child: Icon(Icons.task_alt_rounded),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                IconButton(
+                  tooltip: selectedCategory == 'All'
+                      ? 'Filter by category'
+                      : 'Category: $selectedCategory',
+                  onPressed: _showCategoryFilter,
+                  icon: Icon(
+                    selectedCategory == 'All'
+                        ? Icons.tune_rounded
+                        : Icons.filter_alt_rounded,
+                  ),
+                ),
+              ],
+            ),
+          ),
         ),
       ),
       body: Column(
@@ -79,115 +176,45 @@ class _ComplaintListScreenState
             ),
           ),
 
-          Padding(
-            padding: const EdgeInsets.symmetric(
-              horizontal: 10,
-              vertical: 10,
-            ),
-            child: DropdownButtonFormField<String>(
-              initialValue: selectedCategory,
-              decoration: const InputDecoration(
-                labelText: 'Filter by Category',
-                border: OutlineInputBorder(),
-              ),
-              items: const [
-                DropdownMenuItem(
-                  value: 'All',
-                  child: Text('All'),
-                ),
-                DropdownMenuItem(
-                  value: 'Infrastructure',
-                  child: Text('Infrastructure'),
-                ),
-                DropdownMenuItem(
-                  value: 'Academic',
-                  child: Text('Academic'),
-                ),
-                DropdownMenuItem(
-                  value: 'Hostel',
-                  child: Text('Hostel'),
-                ),
-                DropdownMenuItem(
-                  value: 'Canteen',
-                  child: Text('Canteen'),
-                ),
-                DropdownMenuItem(
-                  value: 'Transport',
-                  child: Text('Transport'),
-                ),
-                DropdownMenuItem(
-                  value: 'Other',
-                  child: Text('Other'),
-                ),
-              ],
-              onChanged: (value) {
-                setState(() {
-                  selectedCategory = value!;
-                });
-              },
-            ),
-          ),
-
           Expanded(
             child: StreamBuilder<List<Complaint>>(
-                  stream: widget.showOnlyMyComplaints
+              stream: widget.showOnlyMyComplaints
                   ? ComplaintService().getMyComplaintsStream()
                   : ComplaintService().getComplaintsStream(),
-                  builder: (context, snapshot) {
-                if (snapshot.connectionState ==
-                    ConnectionState.waiting) {
-                  return const Center(
-                    child: CircularProgressIndicator(),
-                  );
+              builder: (context, snapshot) {
+                if (snapshot.connectionState == ConnectionState.waiting) {
+                  return const Center(child: CircularProgressIndicator());
                 }
 
                 if (snapshot.hasError) {
-                  return Center(
-                    child: Text(
-                      'Error: ${snapshot.error}',
-                    ),
-                  );
+                  return Center(child: Text('Error: ${snapshot.error}'));
                 }
 
                 final complaints = snapshot.data ?? [];
 
-                final filteredComplaints =
-                    complaints.where((complaint) {
+                final filteredComplaints = complaints.where((complaint) {
                   bool matchesSearch =
-                      complaint.title
-                              .toLowerCase()
-                              .contains(searchQuery) ||
-                          complaint.complaintId
-                              .toLowerCase()
-                              .contains(searchQuery);
+                      complaint.title.toLowerCase().contains(searchQuery) ||
+                      complaint.complaintId.toLowerCase().contains(searchQuery);
 
                   bool matchesCategory =
                       selectedCategory == 'All' ||
-                          complaint.category ==
-                              selectedCategory;
+                      complaint.category == selectedCategory;
 
-                  return matchesSearch &&
-                      matchesCategory;
+                  return matchesSearch && matchesCategory;
                 }).toList();
 
-                final pendingComplaints =
-                    filteredComplaints.where(
-                  (complaint) =>
-                      complaint.status == 'Pending',
-                ).toList();
+                final pendingComplaints = filteredComplaints
+                    .where((complaint) => complaint.status == 'Pending')
+                    .toList();
 
-                final inProgressComplaints =
-                    filteredComplaints.where(
-                  (complaint) =>
-                      complaint.status == 'In Progress',
-                ).toList();
+                final inProgressComplaints = filteredComplaints
+                    .where((complaint) => complaint.status == 'In Progress')
+                    .toList();
 
-                final resolvedComplaints =
-                    filteredComplaints.where(
-                  (complaint) =>
-                      complaint.status == 'Resolved',
-                ).toList();
-
+                final resolvedComplaints = filteredComplaints
+                    .where((complaint) => complaint.status == 'Resolved')
+                    .toList();
 
                 pendingComplaints.sort(
                   (a, b) => a.createdAt.compareTo(b.createdAt),
@@ -201,7 +228,6 @@ class _ComplaintListScreenState
                   (a, b) => b.createdAt.compareTo(a.createdAt),
                 );
 
-
                 if (searchQuery.isNotEmpty) {
                   return Column(
                     children: [
@@ -212,19 +238,13 @@ class _ComplaintListScreenState
                         child: const Text(
                           'Showing results from all complaint statuses',
                           textAlign: TextAlign.center,
-                          style: TextStyle(
-                            fontWeight: FontWeight.w500,
-                          ),
+                          style: TextStyle(fontWeight: FontWeight.w500),
                         ),
                       ),
 
                       Expanded(
                         child: filteredComplaints.isEmpty
-                            ? const Center(
-                                child: Text(
-                                  'No complaints found',
-                                ),
-                              )
+                            ? const Center(child: Text('No complaints found'))
                             : ListView.builder(
                                 itemCount: filteredComplaints.length,
                                 itemBuilder: (context, index) {
@@ -244,11 +264,7 @@ class _ComplaintListScreenState
                   children: [
                     // Pending
                     pendingComplaints.isEmpty
-                        ? const Center(
-                            child: Text(
-                              'No pending complaints',
-                            ),
-                          )
+                        ? const Center(child: Text('No pending complaints'))
                         : ListView.builder(
                             itemCount: pendingComplaints.length,
                             itemBuilder: (context, index) {
@@ -261,11 +277,7 @@ class _ComplaintListScreenState
 
                     // In Progress
                     inProgressComplaints.isEmpty
-                        ? const Center(
-                            child: Text(
-                              'No complaints in progress',
-                            ),
-                          )
+                        ? const Center(child: Text('No complaints in progress'))
                         : ListView.builder(
                             itemCount: inProgressComplaints.length,
                             itemBuilder: (context, index) {
@@ -278,11 +290,7 @@ class _ComplaintListScreenState
 
                     // Resolved
                     resolvedComplaints.isEmpty
-                        ? const Center(
-                            child: Text(
-                              'No resolved complaints',
-                            ),
-                          )
+                        ? const Center(child: Text('No resolved complaints'))
                         : ListView.builder(
                             itemCount: resolvedComplaints.length,
                             itemBuilder: (context, index) {
