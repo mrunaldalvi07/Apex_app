@@ -1,10 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-import '../services/fcm_service.dart';
-
 import '../services/auth_service.dart';
 import 'register_screen.dart';
-import 'role_router.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -19,6 +16,7 @@ class _LoginScreenState extends State<LoginScreen> {
 
   bool loading = false;
   bool googleLoading = false;
+  bool resetLoading = false;
 
   Future<void> login() async {
     try {
@@ -33,14 +31,7 @@ class _LoginScreenState extends State<LoginScreen> {
 
       if (!context.mounted) return;
 
-      await FCMService().initialize();
-
-      if (!mounted) return;
-
-      Navigator.pushReplacement(
-        context,
-        MaterialPageRoute(builder: (_) => const RoleRouter()),
-      );
+      // AuthWrapper listens to authStateChanges and shows the correct dashboard.
     } on FirebaseAuthException catch (e) {
       if (!mounted) return;
 
@@ -73,10 +64,7 @@ class _LoginScreenState extends State<LoginScreen> {
         return;
       }
 
-      Navigator.pushReplacement(
-        context,
-        MaterialPageRoute(builder: (_) => const RoleRouter()),
-      );
+      // AuthWrapper listens to authStateChanges and shows the correct dashboard.
     } catch (e) {
       if (!mounted) return;
 
@@ -88,6 +76,37 @@ class _LoginScreenState extends State<LoginScreen> {
         setState(() {
           googleLoading = false;
         });
+      }
+    }
+  }
+
+  Future<void> resetPassword() async {
+    final email = emailController.text.trim();
+    if (email.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Enter your email address first.')),
+      );
+      return;
+    }
+
+    try {
+      setState(() => resetLoading = true);
+      await FirebaseAuth.instance.sendPasswordResetEmail(email: email);
+
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Password reset link sent. Check your email inbox.'),
+        ),
+      );
+    } on FirebaseAuthException catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(e.message ?? 'Could not send reset email.')),
+      );
+    } finally {
+      if (mounted) {
+        setState(() => resetLoading = false);
       }
     }
   }
@@ -127,13 +146,27 @@ class _LoginScreenState extends State<LoginScreen> {
               ),
             ),
 
+            Align(
+              alignment: Alignment.centerRight,
+              child: TextButton(
+                onPressed: loading || googleLoading || resetLoading
+                    ? null
+                    : resetPassword,
+                child: Text(
+                  resetLoading ? 'Sending reset link...' : 'Forgot password?',
+                ),
+              ),
+            ),
+
             const SizedBox(height: 20),
 
             SizedBox(
               width: double.infinity,
               height: 50,
               child: ElevatedButton(
-                onPressed: loading || googleLoading ? null : login,
+                onPressed: loading || googleLoading || resetLoading
+                    ? null
+                    : login,
                 child: loading
                     ? const CircularProgressIndicator()
                     : const Text("LOGIN"),
@@ -159,7 +192,9 @@ class _LoginScreenState extends State<LoginScreen> {
               width: double.infinity,
               height: 50,
               child: OutlinedButton.icon(
-                onPressed: loading || googleLoading ? null : signInWithGoogle,
+                onPressed: loading || googleLoading || resetLoading
+                    ? null
+                    : signInWithGoogle,
                 icon: googleLoading
                     ? const SizedBox(
                         width: 20,
@@ -176,12 +211,16 @@ class _LoginScreenState extends State<LoginScreen> {
             const SizedBox(height: 10),
 
             TextButton(
-              onPressed: () {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(builder: (_) => const RegisterScreen()),
-                );
-              },
+              onPressed: loading || googleLoading || resetLoading
+                  ? null
+                  : () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (_) => const RegisterScreen(),
+                        ),
+                      );
+                    },
               child: const Text("Create Account"),
             ),
           ],

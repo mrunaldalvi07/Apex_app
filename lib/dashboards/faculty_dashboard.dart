@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-import '../auth/login_screen.dart';
 import '../screens/attendance_management_screen.dart';
 import '../screens/classroom_management_screen.dart';
 import '../screens/complaint_management_screen.dart';
@@ -11,14 +10,7 @@ class FacultyDashboard extends StatelessWidget {
 
   Future<void> logout(BuildContext context) async {
     await FirebaseAuth.instance.signOut();
-
-    if (!context.mounted) return;
-
-    Navigator.pushAndRemoveUntil(
-      context,
-      MaterialPageRoute(builder: (_) => const LoginScreen()),
-      (route) => false,
-    );
+    // AuthWrapper reacts to sign-out and displays LoginScreen.
   }
 
   Widget dashboardCard(
