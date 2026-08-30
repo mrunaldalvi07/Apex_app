@@ -2,38 +2,38 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 
 class NotificationService {
+  final FirebaseFirestore firestore;
 
-  final FirebaseFirestore firestore =
-      FirebaseFirestore.instance;
+  NotificationService({
+    FirebaseFirestore? firestore,
+  }) : firestore =
+            firestore ?? FirebaseFirestore.instance;
 
   Future<void> sendAttendanceWarning({
     required String studentId,
     required String course,
     required double percentage,
+    double threshold = 75.0,
   }) async {
-
     final faculty =
         FirebaseAuth.instance.currentUser;
 
-    await firestore.collection('notifications').add({
-
+    await firestore
+        .collection('notifications')
+        .add({
       'studentId': studentId,
-
       'title': 'Attendance Warning',
-
       'message':
-          'Your attendance in $course is ${percentage.toStringAsFixed(1)}%. Minimum required attendance is 75%.',
-
+          'Your attendance in $course is '
+          '${percentage.toStringAsFixed(1)}%. '
+          'Minimum required attendance is '
+          '${threshold.toStringAsFixed(0)}%.',
       'type': 'attendance',
-
       'percentage': percentage,
-
-      'course': course,
-
+      'threshold': threshold,
+      'course': course.toUpperCase(),
       'facultyId': faculty?.uid,
-
       'read': false,
-
       'createdAt':
           FieldValue.serverTimestamp(),
     });

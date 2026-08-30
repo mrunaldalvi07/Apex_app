@@ -1,120 +1,8 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 
-import '../../models/attendance_summary_model.dart';
-import '../../services/attendance_export_service.dart';
-
-extension AttendanceExportServiceSummary on AttendanceExportService {
-  Future<List<AttendanceSummaryModel>> getAttendanceSummary({
-    required String branch,
-    required String year,
-    required String course,
-    required String month,
-  }) async {
-    final students = await firestore
-        .collection('users')
-        .where('role', isEqualTo: 'student')
-        .where('branch', isEqualTo: branch)
-        .where('year', isEqualTo: year)
-        .get();
-
-    final sessions = await firestore
-        .collection('live_sessions')
-        .where('branch', isEqualTo: branch)
-        .where('year', isEqualTo: year)
-        .where('course', isEqualTo: course)
-        .where('status', isEqualTo: 'ended')
-        .get();
-
-    const monthNames = [
-      '',
-      'January',
-      'February',
-      'March',
-      'April',
-      'May',
-      'June',
-      'July',
-      'August',
-      'September',
-      'October',
-      'November',
-      'December',
-    ];
-
-    final List<QueryDocumentSnapshot<Map<String, dynamic>>> sessionDocs = [];
-
-    for (final session in sessions.docs) {
-      final Timestamp? timestamp =
-          session.data()['createdAt'] as Timestamp?;
-
-      if (timestamp == null) continue;
-
-      final sessionMonth = monthNames[timestamp.toDate().month];
-      if (sessionMonth == month) {
-        sessionDocs.add(session);
-      }
-    }
-
-    sessionDocs.sort((a, b) {
-      final Timestamp ta = a['createdAt'];
-      final Timestamp tb = b['createdAt'];
-      return ta.toDate().compareTo(tb.toDate());
-    });
-
-    final studentDocs = students.docs.toList();
-
-    studentDocs.sort((a, b) {
-      final rollA = (a['rollNo'] ?? '').toString();
-      final rollB = (b['rollNo'] ?? '').toString();
-      return rollA.compareTo(rollB);
-    });
-
-    final List<AttendanceSummaryModel> summaryList = [];
-
-    for (final student in studentDocs) {
-      final studentData = student.data();
-
-      int present = 0;
-      int absent = 0;
-
-      for (final session in sessionDocs) {
-        final attendanceDoc = await firestore
-            .collection('attendance')
-            .doc(session.id)
-            .collection('students')
-            .doc(student.id)
-            .get();
-
-        if (attendanceDoc.exists &&
-            attendanceDoc.data()?['status'] == 'Present') {
-          present++;
-        } else {
-          absent++;
-        }
-      }
-
-      final int totalClasses = sessionDocs.length;
-      final double attendancePercentage =
-          totalClasses > 0 ? (present / totalClasses) * 100 : 0.0;
-
-      summaryList.add(
-        AttendanceSummaryModel(
-          studentId: student.id,
-          rollNo: (studentData['rollNo'] ?? '').toString(),
-          studentName: (studentData['name'] ?? '').toString(),
-          present: present,
-          absent: absent,
-          totalClasses: totalClasses,
-          attendancePercentage: attendancePercentage,
-          status: attendancePercentage >= 75 ? 'Regular' : 'Detained',
-        ),
-      );
-    }
-
-    return summaryList;
-  }
-}
+import '../models/attendance_summary_model.dart';
+import '../widgets/attendance_ui.dart';
 
 class AttendanceSummaryScreen extends StatefulWidget {
   final String branch;
@@ -137,6 +25,9 @@ class AttendanceSummaryScreen extends StatefulWidget {
 
 class _AttendanceSummaryScreenState
     extends State<AttendanceSummaryScreen> {
+  final FirebaseFirestore _firestore =
+      FirebaseFirestore.instance;
+
   bool loading = true;
 
   List<AttendanceSummaryModel> summary = [];
@@ -147,263 +38,553 @@ class _AttendanceSummaryScreenState
 
   double averageAttendance = 0;
 
+  static const List<String> months = [
+    '',
+    'January',
+    'February',
+    'March',
+    'April',
+    'May',
+    'June',
+    'July',
+    'August',
+    'September',
+    'October',
+    'November',
+    'December',
+  ];
+
   @override
   void initState() {
     super.initState();
     loadSummary();
   }
 
-  Future<void> loadSummary() async {
-    setState(() {
-      loading = true;
+  Future<List<AttendanceSummaryModel>>
+      _getSummary() async {
+    final studentsSnapshot =
+        await _firestore
+            .collection('users')
+            .where(
+              'role',
+              isEqualTo: 'student',
+            )
+            .where(
+              'branch',
+              isEqualTo: widget.branch,
+            )
+            .where(
+              'year',
+              isEqualTo: widget.year,
+            )
+            .get();
+
+    final sessionsSnapshot =
+        await _firestore
+            .collection('live_sessions')
+            .where(
+              'branch',
+              isEqualTo: widget.branch,
+            )
+            .where(
+              'year',
+              isEqualTo: widget.year,
+            )
+            .where(
+              'course',
+              isEqualTo: widget.course,
+            )
+            .where(
+              'status',
+              isEqualTo: 'ended',
+            )
+            .get();
+
+    final monthNumber =
+        months.indexOf(widget.month);
+
+    final sessions =
+        sessionsSnapshot.docs.where((doc) {
+      final value =
+          doc.data()['createdAt'];
+
+      if (value is! Timestamp) {
+        return false;
+      }
+
+      return value.toDate().month ==
+          monthNumber;
+    }).toList();
+
+    sessions.sort((a, b) {
+      final aTime =
+          a.data()['createdAt'] as Timestamp;
+      final bTime =
+          b.data()['createdAt'] as Timestamp;
+
+      return aTime
+          .toDate()
+          .compareTo(
+            bTime.toDate(),
+          );
     });
 
-    try {
-      summary = await AttendanceExportService()
-          .getAttendanceSummary(
-        branch: widget.branch,
-        year: widget.year,
-        course: widget.course,
-        month: widget.month,
+    final students =
+        studentsSnapshot.docs.toList();
+
+    students.sort((a, b) {
+      final rollA =
+          (a.data()['rollNo'] ?? '')
+              .toString();
+
+      final rollB =
+          (b.data()['rollNo'] ?? '')
+              .toString();
+
+      final numA =
+          int.tryParse(rollA);
+
+      final numB =
+          int.tryParse(rollB);
+
+      if (numA != null && numB != null) {
+        return numA.compareTo(numB);
+      }
+
+      return rollA.compareTo(rollB);
+    });
+
+    final result =
+        <AttendanceSummaryModel>[];
+
+    for (final student in students) {
+      int present = 0;
+      int absent = 0;
+
+      for (final session in sessions) {
+        final attendance =
+            await _firestore
+                .collection('attendance')
+                .doc(session.id)
+                .collection('students')
+                .doc(student.id)
+                .get();
+
+        final status =
+            attendance.data()?['status'];
+
+        if (status == 'Present' ||
+            status == 'present' ||
+            status == true) {
+          present++;
+        } else {
+          absent++;
+        }
+      }
+
+      final totalClasses =
+          sessions.length;
+
+      final percentage =
+          totalClasses == 0
+              ? 0.0
+              : present /
+                      totalClasses *
+                  100;
+
+      final data =
+          student.data();
+
+      result.add(
+        AttendanceSummaryModel(
+          studentId: student.id,
+          rollNo:
+              (data['rollNo'] ?? '')
+                  .toString(),
+          studentName:
+              (data['name'] ??
+                      data['displayName'] ??
+                      '')
+                  .toString(),
+          present: present,
+          absent: absent,
+          totalClasses: totalClasses,
+          attendancePercentage:
+              percentage,
+          status: percentage >= 75
+              ? 'Regular'
+              : 'Detained',
+        ),
       );
+    }
+
+    return result;
+  }
+
+  Future<void> loadSummary() async {
+    setState(() => loading = true);
+
+    try {
+      summary = await _getSummary();
 
       totalStudents = summary.length;
 
       regularStudents = summary
-          .where((e) => !e.detained)
+          .where(
+            (student) =>
+                student.attendancePercentage >=
+                75,
+          )
           .length;
 
       detainedStudents = summary
-          .where((e) => e.detained)
+          .where(
+            (student) =>
+                student.attendancePercentage <
+                75,
+          )
           .length;
 
-      if (summary.isNotEmpty) {
-        averageAttendance = summary
-                .map((e) => e.attendancePercentage)
-                .reduce((a, b) => a + b) /
-            summary.length;
-      } else {
+      if (summary.isEmpty) {
         averageAttendance = 0;
+      } else {
+        averageAttendance =
+            summary
+                    .map(
+                      (e) =>
+                          e.attendancePercentage,
+                    )
+                    .reduce(
+                      (a, b) => a + b,
+                    ) /
+                summary.length;
       }
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context)
             .showSnackBar(
           SnackBar(
-            content: Text(e.toString()),
+            content: Text(
+              e.toString().replaceFirst(
+                'Exception: ',
+                '',
+              ),
+            ),
           ),
         );
       }
     }
 
     if (mounted) {
-      setState(() {
-        loading = false;
-      });
+      setState(() => loading = false);
     }
-  }
-
-  Widget buildInfoCard(
-    String title,
-    String value,
-    IconData icon,
-    Color color,
-  ) {
-    return Expanded(
-      child: Card(
-        elevation: 3,
-        child: Padding(
-          padding: const EdgeInsets.all(12),
-          child: Column(
-            children: [
-              Icon(
-                icon,
-                color: color,
-                size: 30,
-              ),
-              const SizedBox(height: 8),
-              Text(
-                value,
-                style: const TextStyle(
-                  fontSize: 22,
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
-              const SizedBox(height: 5),
-              Text(
-                title,
-                textAlign: TextAlign.center,
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
   }
 
   @override
   Widget build(BuildContext context) {
     if (loading) {
       return const Scaffold(
+        backgroundColor:
+            AttendanceUI.background,
         body: Center(
-          child: CircularProgressIndicator(),
+          child: CircularProgressIndicator(
+            color: AttendanceUI.primaryBlue,
+          ),
         ),
       );
     }
 
     return Scaffold(
+      backgroundColor: AttendanceUI.background,
       appBar: AppBar(
-        title: const Text(
-          "Attendance Summary",
+        backgroundColor: Colors.white,
+        elevation: 0,
+        leading:
+            AttendanceUI.backButton(context),
+        title: Text(
+          'Attendance Summary',
+          style: AttendanceUI.title,
         ),
+        centerTitle: true,
+        actions: [
+          IconButton(
+            onPressed: loadSummary,
+            icon: const Icon(
+              Icons.refresh,
+              color: AttendanceUI.darkNavy,
+            ),
+          ),
+        ],
       ),
-      body: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
+      body: RefreshIndicator(
+        onRefresh: loadSummary,
+        child: ListView(
+          padding: const EdgeInsets.all(16),
           children: [
+            _summaryHeader(),
+
+            const SizedBox(height: 15),
 
             Row(
               children: [
-
-                buildInfoCard(
-                  "Students",
-                  totalStudents.toString(),
-                  Icons.people,
-                  Colors.blue,
+                _stat(
+                  'Students',
+                  '$totalStudents',
+                  Icons.groups,
+                  AttendanceUI.primaryBlue,
                 ),
-
-                const SizedBox(width: 10),
-
-                buildInfoCard(
-                  "Regular",
-                  regularStudents.toString(),
+                const SizedBox(width: 8),
+                _stat(
+                  'Regular',
+                  '$regularStudents',
                   Icons.check_circle,
-                  Colors.green,
+                  AttendanceUI.green,
                 ),
               ],
             ),
 
-            const SizedBox(height: 10),
+            const SizedBox(height: 8),
 
             Row(
               children: [
-
-                buildInfoCard(
-                  "Detained",
-                  detainedStudents.toString(),
-                  Icons.warning,
-                  Colors.red,
+                _stat(
+                  'Detained',
+                  '$detainedStudents',
+                  Icons.warning_amber,
+                  AttendanceUI.orange,
                 ),
-
-                const SizedBox(width: 10),
-
-                buildInfoCard(
-                  "Average %",
-                  averageAttendance
-                      .toStringAsFixed(1),
+                const SizedBox(width: 8),
+                _stat(
+                  'Average',
+                  '${averageAttendance.toStringAsFixed(1)}%',
                   Icons.analytics,
-                  Colors.orange,
+                  AttendanceUI.cyan,
                 ),
               ],
             ),
 
             const SizedBox(height: 20),
-            Expanded(
-  child: summary.isEmpty
-      ? const Center(
-          child: Text(
-            "No Attendance Data Available",
-            style: TextStyle(fontSize: 16),
-          ),
-        )
-      : SingleChildScrollView(
-          scrollDirection: Axis.horizontal,
-          child: SingleChildScrollView(
-            child: DataTable(
-              headingRowColor:
-                  WidgetStateProperty.all(
-                Colors.blue.shade100,
-              ),
-              columns: const [
-                DataColumn(
-                  label: Text("Roll No"),
-                ),
-                DataColumn(
-                  label: Text("Name"),
-                ),
-                DataColumn(
-                  numeric: true,
-                  label: Text("Present"),
-                ),
-                DataColumn(
-                  numeric: true,
-                  label: Text("Absent"),
-                ),
-                DataColumn(
-                  numeric: true,
-                  label: Text("%"),
-                ),
-                DataColumn(
-                  label: Text("Status"),
-                ),
-              ],
-              rows: summary.map((student) {
-                return DataRow(
-                  cells: [
-                    DataCell(
-                      Text(student.rollNo),
-                    ),
-                    DataCell(
-                      Text(student.studentName),
-                    ),
-                    DataCell(
-                      Text(student.present.toString()),
-                    ),
-                    DataCell(
-                      Text(student.absent.toString()),
-                    ),
-                    DataCell(
-                      Text(
-                        "${student.attendancePercentage.toStringAsFixed(1)}%",
-                      ),
-                    ),
-                    DataCell(
-                      Container(
-                        padding:
-                            const EdgeInsets.symmetric(
-                          horizontal: 10,
-                          vertical: 5,
-                        ),
-                        decoration: BoxDecoration(
-                          color: student.detained
-                              ? Colors.red.shade100
-                              : Colors.green.shade100,
-                          borderRadius:
-                              BorderRadius.circular(20),
-                        ),
-                        child: Text(
-                          student.detained
-                              ? "Detained"
-                              : "Regular",
-                          style: TextStyle(
-                            color: student.detained
-                                ? Colors.red
-                                : Colors.green,
-                            fontWeight:
-                                FontWeight.bold,
-                          ),
-                        ),
-                      ),
-                    ),
-                  ],
-                );
-              }).toList(),
+
+            Text(
+              'Student Attendance',
+              style: AttendanceUI.sectionTitle,
             ),
-          ),
-        ),
-),
+
+            const SizedBox(height: 10),
+
+            if (summary.isEmpty)
+              Container(
+                padding:
+                    const EdgeInsets.all(30),
+                decoration:
+                    AttendanceUI.cardDecoration(),
+                child: const Center(
+                  child: Text(
+                    'No attendance data available.',
+                  ),
+                ),
+              )
+            else
+              ...summary.asMap().entries.map(
+                (entry) {
+                  return _studentCard(
+                    entry.key + 1,
+                    entry.value,
+                  );
+                },
+              ),
           ],
         ),
+      ),
+    );
+  }
+
+  Widget _summaryHeader() {
+    return Container(
+      padding: const EdgeInsets.all(18),
+      decoration: BoxDecoration(
+        gradient: const LinearGradient(
+          colors: [
+            AttendanceUI.darkNavy,
+            AttendanceUI.primaryNavy,
+          ],
+        ),
+        borderRadius:
+            BorderRadius.circular(17),
+      ),
+      child: Column(
+        crossAxisAlignment:
+            CrossAxisAlignment.start,
+        children: [
+          const Text(
+            'Attendance Overview',
+            style: TextStyle(
+              color: Colors.white,
+              fontWeight: FontWeight.w800,
+              fontSize: 16,
+            ),
+          ),
+          const SizedBox(height: 6),
+          Text(
+            '${widget.course} • ${widget.branch} • ${widget.year} Year',
+            style: const TextStyle(
+              color: Colors.white70,
+              fontSize: 11,
+            ),
+          ),
+          const SizedBox(height: 15),
+          Text(
+            '${averageAttendance.toStringAsFixed(1)}%',
+            style: const TextStyle(
+              color: Colors.white,
+              fontSize: 30,
+              fontWeight: FontWeight.w800,
+            ),
+          ),
+          const Text(
+            'Average Attendance',
+            style: TextStyle(
+              color: Colors.white70,
+              fontSize: 11,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _stat(
+    String title,
+    String value,
+    IconData icon,
+    Color color,
+  ) {
+    return Expanded(
+      child: Container(
+        padding: const EdgeInsets.all(14),
+        decoration:
+            AttendanceUI.cardDecoration(),
+        child: Row(
+          children: [
+            Icon(
+              icon,
+              color: color,
+              size: 23,
+            ),
+            const SizedBox(width: 9),
+            Expanded(
+              child: Column(
+                crossAxisAlignment:
+                    CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    value,
+                    style: const TextStyle(
+                      color:
+                          AttendanceUI.darkNavy,
+                      fontWeight:
+                          FontWeight.w800,
+                      fontSize: 16,
+                    ),
+                  ),
+                  Text(
+                    title,
+                    style: const TextStyle(
+                      color:
+                          AttendanceUI.textGrey,
+                      fontSize: 9,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _studentCard(
+    int index,
+    AttendanceSummaryModel student,
+  ) {
+    final detained =
+        student.attendancePercentage < 75;
+
+    return Container(
+      margin:
+          const EdgeInsets.only(bottom: 10),
+      padding: const EdgeInsets.all(13),
+      decoration:
+          AttendanceUI.cardDecoration(),
+      child: Row(
+        children: [
+          CircleAvatar(
+            radius: 19,
+            backgroundColor:
+                AttendanceUI.primaryBlue
+                    .withValues(alpha: .10),
+            child: Text(
+              index.toString().padLeft(2, '0'),
+              style: const TextStyle(
+                color: AttendanceUI.primaryBlue,
+                fontWeight: FontWeight.w800,
+                fontSize: 10,
+              ),
+            ),
+          ),
+          const SizedBox(width: 11),
+          Expanded(
+            child: Column(
+              crossAxisAlignment:
+                  CrossAxisAlignment.start,
+              children: [
+                Text(
+                  student.studentName,
+                  style: const TextStyle(
+                    color:
+                        AttendanceUI.darkNavy,
+                    fontWeight: FontWeight.w700,
+                    fontSize: 12,
+                  ),
+                ),
+                const SizedBox(height: 3),
+                Text(
+                  'Roll No. ${student.rollNo}',
+                  style: AttendanceUI.body,
+                ),
+              ],
+            ),
+          ),
+          Column(
+            crossAxisAlignment:
+                CrossAxisAlignment.end,
+            children: [
+              Text(
+                '${student.attendancePercentage.toStringAsFixed(0)}%',
+                style: TextStyle(
+                  color: detained
+                      ? AttendanceUI.red
+                      : AttendanceUI.green,
+                  fontWeight: FontWeight.w800,
+                ),
+              ),
+              const SizedBox(height: 3),
+              Text(
+                detained
+                    ? 'Detained'
+                    : 'Regular',
+                style: TextStyle(
+                  color: detained
+                      ? AttendanceUI.red
+                      : AttendanceUI.green,
+                  fontSize: 9,
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
+            ],
+          ),
+        ],
       ),
     );
   }

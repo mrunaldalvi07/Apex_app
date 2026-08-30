@@ -45,8 +45,9 @@ class _CreateNoticeScreenState extends State<CreateNoticeScreen> {
     }
   }
 
-  Future<void> pickFiles() async {
-    List<PlatformFile> files = await FilePicker.pickFiles();
+    Future<void> pickFiles() async {
+    final FilePickerResult? result = await FilePicker.pickFiles();
+    final List<PlatformFile> files = result?.files ?? [];
 
     if (files.isNotEmpty) {
       debugPrint('Selected ${files.length} file(s).');
