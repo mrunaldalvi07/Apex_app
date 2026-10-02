@@ -7,6 +7,14 @@ import '../theme/complaint_theme.dart';
 class ComplaintManagementScreen extends StatelessWidget {
   const ComplaintManagementScreen({super.key});
 
+  static const Color _primaryNavy = Color(0xFF073B6F);
+  static const Color _primaryBlue = Color(0xFF0B6EAA);
+  static const LinearGradient _buttonGradient = LinearGradient(
+    colors: [_primaryNavy, _primaryBlue],
+    begin: Alignment.topLeft,
+    end: Alignment.bottomRight,
+  );
+
   @override
   Widget build(BuildContext context) {
     return Theme(
@@ -31,6 +39,7 @@ class ComplaintManagementScreen extends StatelessWidget {
                 _actionButton(
                   icon: Icons.assignment_outlined,
                   title: 'View Complaints',
+                  subtitle: 'Review, update, and resolve cases.',
                   onTap: () {
                     Navigator.push(
                       context,
@@ -47,6 +56,7 @@ class ComplaintManagementScreen extends StatelessWidget {
                 _actionButton(
                   icon: Icons.analytics_outlined,
                   title: 'Analytics',
+                  subtitle: 'Monitor case volume and progress.',
                   onTap: () {
                     Navigator.push(
                       context,
@@ -67,23 +77,25 @@ class ComplaintManagementScreen extends StatelessWidget {
   Widget _actionButton({
     required IconData icon,
     required String title,
+    required String subtitle,
     required VoidCallback onTap,
   }) {
     return SizedBox(
       width: double.infinity,
+      height: 64,
       child: Material(
         color: Colors.transparent,
         child: InkWell(
           borderRadius: BorderRadius.circular(17),
           onTap: onTap,
           child: Container(
-            padding: const EdgeInsets.all(20),
+            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
             decoration: BoxDecoration(
-              gradient: ComplaintPalette.attendanceActionGradient,
-              borderRadius: BorderRadius.circular(20),
+              gradient: _buttonGradient,
+              borderRadius: BorderRadius.circular(17),
               boxShadow: const [
                 BoxShadow(
-                  color: Color(0x22073B6F),
+                  color: Color(0x33073B6F),
                   blurRadius: 14,
                   offset: Offset(0, 6),
                 ),
@@ -91,30 +103,38 @@ class ComplaintManagementScreen extends StatelessWidget {
             ),
             child: Row(
               children: [
-                Container(
-                  height: 56,
-                  width: 56,
-                  decoration: BoxDecoration(
-                    color: Colors.white.withValues(alpha: 0.15),
-                    borderRadius: BorderRadius.circular(15),
-                  ),
-                  child: Icon(icon, color: Colors.white, size: 30),
-                ),
-                const SizedBox(width: 15),
+                Icon(icon, color: Colors.white, size: 27),
+                const SizedBox(width: 14),
                 Expanded(
                   child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
                         title,
                         style: const TextStyle(
                           color: Colors.white,
-                          fontSize: 19,
+                          fontSize: 14.5,
                           fontWeight: FontWeight.w800,
+                        ),
+                      ),
+                      const SizedBox(height: 3),
+                      Text(
+                        subtitle,
+                        style: const TextStyle(
+                          color: Colors.white70,
+                          fontSize: 11.5,
+                          height: 1.3,
                         ),
                       ),
                     ],
                   ),
+                ),
+                const SizedBox(width: 8),
+                const Icon(
+                  Icons.arrow_forward_ios_rounded,
+                  color: Colors.white,
+                  size: 14,
                 ),
               ],
             ),
