@@ -31,8 +31,6 @@ class ComplaintManagementScreen extends StatelessWidget {
                 _actionButton(
                   icon: Icons.assignment_outlined,
                   title: 'View Complaints',
-                  subtitle: 'Review, update, and resolve cases.',
-                  gradient: ComplaintPalette.primaryGradient,
                   onTap: () {
                     Navigator.push(
                       context,
@@ -49,10 +47,6 @@ class ComplaintManagementScreen extends StatelessWidget {
                 _actionButton(
                   icon: Icons.analytics_outlined,
                   title: 'Analytics',
-                  subtitle: 'Monitor case volume and progress.',
-                  gradient: const LinearGradient(
-                    colors: [ComplaintPalette.teal, ComplaintPalette.cyan],
-                  ),
                   onTap: () {
                     Navigator.push(
                       context,
@@ -73,48 +67,56 @@ class ComplaintManagementScreen extends StatelessWidget {
   Widget _actionButton({
     required IconData icon,
     required String title,
-    required String subtitle,
-    required Gradient gradient,
     required VoidCallback onTap,
   }) {
     return SizedBox(
       width: double.infinity,
       child: Material(
         color: Colors.transparent,
-        child: Ink(
-          height: 78,
-          decoration: BoxDecoration(
-            gradient: gradient,
-            borderRadius: BorderRadius.circular(8),
-          ),
-          child: InkWell(
-            borderRadius: BorderRadius.circular(8),
-            onTap: onTap,
-            child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 20),
-              child: Row(
-                children: [
-                  Icon(icon, color: Colors.white),
-                  const SizedBox(width: 14),
-                  Expanded(
-                    child: Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(title,
-                            style: const TextStyle(
-                                color: Colors.white,
-                                fontWeight: FontWeight.w700)),
-                        const SizedBox(height: 3),
-                        Text(subtitle,
-                            style: const TextStyle(
-                                color: Colors.white70, fontSize: 12)),
-                      ],
-                    ),
+        child: InkWell(
+          borderRadius: BorderRadius.circular(17),
+          onTap: onTap,
+          child: Container(
+            padding: const EdgeInsets.all(20),
+            decoration: BoxDecoration(
+              gradient: ComplaintPalette.attendanceActionGradient,
+              borderRadius: BorderRadius.circular(20),
+              boxShadow: const [
+                BoxShadow(
+                  color: Color(0x22073B6F),
+                  blurRadius: 14,
+                  offset: Offset(0, 6),
+                ),
+              ],
+            ),
+            child: Row(
+              children: [
+                Container(
+                  height: 56,
+                  width: 56,
+                  decoration: BoxDecoration(
+                    color: Colors.white.withValues(alpha: 0.15),
+                    borderRadius: BorderRadius.circular(15),
                   ),
-                  const Icon(Icons.arrow_forward_rounded, color: Colors.white),
-                ],
-              ),
+                  child: Icon(icon, color: Colors.white, size: 30),
+                ),
+                const SizedBox(width: 15),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        title,
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontSize: 19,
+                          fontWeight: FontWeight.w800,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
             ),
           ),
         ),

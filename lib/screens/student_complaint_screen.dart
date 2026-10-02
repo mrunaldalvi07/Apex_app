@@ -35,7 +35,7 @@ class StudentComplaintScreen extends StatelessWidget {
                     child: Ink(
                       height: 64,
                       decoration: const BoxDecoration(
-                        gradient: ComplaintPalette.primaryGradient,
+                        gradient: ComplaintPalette.attendanceActionGradient,
                         borderRadius: BorderRadius.all(Radius.circular(8)),
                       ),
                       child: InkWell(
@@ -78,12 +78,7 @@ class StudentComplaintScreen extends StatelessWidget {
                     child: Ink(
                       height: 64,
                       decoration: const BoxDecoration(
-                        gradient: LinearGradient(
-                          colors: [
-                            ComplaintPalette.teal,
-                            ComplaintPalette.cyan
-                          ],
-                        ),
+                        gradient: ComplaintPalette.attendanceActionGradient,
                         borderRadius: BorderRadius.all(Radius.circular(8)),
                       ),
                       child: InkWell(

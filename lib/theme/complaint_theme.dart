@@ -18,6 +18,12 @@ abstract final class ComplaintPalette {
     end: Alignment.bottomRight,
   );
 
+  static const attendanceActionGradient = LinearGradient(
+    colors: [navy, teal],
+    begin: Alignment.topLeft,
+    end: Alignment.bottomRight,
+  );
+
   static const pageGradient = LinearGradient(
     colors: [Color(0xFFF5F8FC), skyBlue, beige],
     begin: Alignment.topCenter,
