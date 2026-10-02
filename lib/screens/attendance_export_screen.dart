@@ -23,7 +23,6 @@ class _AttendanceExportScreenState extends State<AttendanceExportScreen> {
   static const Color primaryBlue = Color(0xFF0B6EAA);
   static const Color cyan = Color(0xFF18A8C8);
   static const Color successGreen = Color(0xFF159957);
-  static const Color warningOrange = Color(0xFFF39A23);
 
   // ============================================================
   // DATA

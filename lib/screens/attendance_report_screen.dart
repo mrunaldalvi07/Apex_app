@@ -6,12 +6,10 @@ class AttendanceReportScreen extends StatefulWidget {
   const AttendanceReportScreen({super.key});
 
   @override
-  State<AttendanceReportScreen> createState() =>
-      _AttendanceReportScreenState();
+  State<AttendanceReportScreen> createState() => _AttendanceReportScreenState();
 }
 
-class _AttendanceReportScreenState
-    extends State<AttendanceReportScreen> {
+class _AttendanceReportScreenState extends State<AttendanceReportScreen> {
   // ============================================================
   // COLORS
   // ============================================================
@@ -21,15 +19,13 @@ class _AttendanceReportScreenState
   static const Color primaryBlue = Color(0xFF0B6EAA);
   static const Color cyan = Color(0xFF18A8C8);
   static const Color successGreen = Color(0xFF159957);
-  static const Color warningOrange = Color(0xFFF39A23);
   static const Color background = Color(0xFFF5F8FC);
 
   // ============================================================
   // SERVICE
   // ============================================================
 
-  final AttendanceExportService _exportService =
-      AttendanceExportService();
+  final AttendanceExportService _exportService = AttendanceExportService();
 
   // ============================================================
   // DROPDOWN DATA
@@ -99,12 +95,10 @@ class _AttendanceReportScreenState
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: background,
-
       appBar: AppBar(
         elevation: 0,
         backgroundColor: Colors.white,
         foregroundColor: darkNavy,
-
         leading: IconButton(
           icon: const Icon(
             Icons.arrow_back_rounded,
@@ -113,7 +107,6 @@ class _AttendanceReportScreenState
             Navigator.pop(context);
           },
         ),
-
         title: const Text(
           'Attendance Reports',
           style: TextStyle(
@@ -122,10 +115,8 @@ class _AttendanceReportScreenState
             fontWeight: FontWeight.bold,
           ),
         ),
-
         centerTitle: true,
       ),
-
       body: SafeArea(
         child: LayoutBuilder(
           builder: (
@@ -139,28 +130,18 @@ class _AttendanceReportScreenState
                   minHeight: constraints.maxHeight - 32,
                 ),
                 child: Column(
-                  crossAxisAlignment:
-                      CrossAxisAlignment.stretch,
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
                     _buildHeaderCard(),
-
                     const SizedBox(height: 16),
-
                     _buildFilterCard(),
-
                     const SizedBox(height: 16),
-
                     _buildReportActions(),
-
                     if (_generatedFilePath != null) ...[
                       const SizedBox(height: 16),
                       _buildGeneratedFileCard(),
                     ],
-
                     const SizedBox(height: 20),
-
-          
-
                     const SizedBox(height: 30),
                   ],
                 ),
@@ -179,7 +160,6 @@ class _AttendanceReportScreenState
   Widget _buildHeaderCard() {
     return Container(
       padding: const EdgeInsets.all(18),
-
       decoration: BoxDecoration(
         gradient: const LinearGradient(
           colors: [
@@ -189,9 +169,7 @@ class _AttendanceReportScreenState
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
         ),
-
         borderRadius: BorderRadius.circular(18),
-
         boxShadow: const [
           BoxShadow(
             color: Color(0x22073B6F),
@@ -200,31 +178,25 @@ class _AttendanceReportScreenState
           ),
         ],
       ),
-
       child: Row(
         children: [
           Container(
             height: 52,
             width: 52,
-
             decoration: BoxDecoration(
               color: Colors.white.withOpacity(0.15),
               borderRadius: BorderRadius.circular(14),
             ),
-
             child: const Icon(
               Icons.assessment_rounded,
               color: Colors.white,
               size: 28,
             ),
           ),
-
           const SizedBox(width: 14),
-
           const Expanded(
             child: Column(
-              crossAxisAlignment:
-                  CrossAxisAlignment.start,
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
                   'Attendance Reports',
@@ -234,9 +206,7 @@ class _AttendanceReportScreenState
                     fontWeight: FontWeight.bold,
                   ),
                 ),
-
                 SizedBox(height: 5),
-
                 Text(
                   'Generate and export date-wise attendance sheets.',
                   style: TextStyle(
@@ -259,15 +229,12 @@ class _AttendanceReportScreenState
   Widget _buildFilterCard() {
     return Container(
       padding: const EdgeInsets.all(16),
-
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(18),
-
         border: Border.all(
           color: const Color(0xFFE1E8F0),
         ),
-
         boxShadow: const [
           BoxShadow(
             color: Color(0x10000000),
@@ -276,11 +243,8 @@ class _AttendanceReportScreenState
           ),
         ],
       ),
-
       child: Column(
-        crossAxisAlignment:
-            CrossAxisAlignment.start,
-
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           const Row(
             children: [
@@ -289,9 +253,7 @@ class _AttendanceReportScreenState
                 color: primaryBlue,
                 size: 21,
               ),
-
               SizedBox(width: 8),
-
               Text(
                 'Report Filters',
                 style: TextStyle(
@@ -302,9 +264,7 @@ class _AttendanceReportScreenState
               ),
             ],
           ),
-
           const SizedBox(height: 15),
-
           _buildDropdown(
             label: 'Branch',
             value: _selectedBranch,
@@ -316,9 +276,7 @@ class _AttendanceReportScreenState
               });
             },
           ),
-
           const SizedBox(height: 12),
-
           _buildDropdown(
             label: 'Year',
             value: _selectedYear,
@@ -330,9 +288,7 @@ class _AttendanceReportScreenState
               });
             },
           ),
-
           const SizedBox(height: 12),
-
           _buildDropdown(
             label: 'Course',
             value: _selectedCourse,
@@ -344,9 +300,7 @@ class _AttendanceReportScreenState
               });
             },
           ),
-
           const SizedBox(height: 12),
-
           _buildDropdown(
             label: 'Month',
             value: _selectedMonth,
@@ -376,8 +330,7 @@ class _AttendanceReportScreenState
   }) {
     // IMPORTANT:
     // Make a guaranteed non-null copy.
-    final List<String> safeItems =
-        List<String>.from(items);
+    final List<String> safeItems = List<String>.from(items);
 
     // IMPORTANT:
     // Never pass a value which is not present
@@ -395,69 +348,50 @@ class _AttendanceReportScreenState
 
     return DropdownButtonFormField<String>(
       initialValue: safeValue,
-
       isExpanded: true,
-
       icon: const Icon(
         Icons.keyboard_arrow_down_rounded,
         color: primaryNavy,
       ),
-
       decoration: InputDecoration(
         labelText: label,
-
         labelStyle: const TextStyle(
           color: darkNavy,
           fontSize: 13,
         ),
-
         prefixIcon: Icon(
           icon,
           color: primaryBlue,
           size: 21,
         ),
-
         filled: true,
-
         fillColor: const Color(0xFFF9FBFD),
-
-        contentPadding:
-            const EdgeInsets.symmetric(
+        contentPadding: const EdgeInsets.symmetric(
           horizontal: 12,
           vertical: 14,
         ),
-
         enabledBorder: OutlineInputBorder(
-          borderRadius:
-              BorderRadius.circular(12),
-
+          borderRadius: BorderRadius.circular(12),
           borderSide: const BorderSide(
             color: Color(0xFFE0E7EF),
           ),
         ),
-
         focusedBorder: OutlineInputBorder(
-          borderRadius:
-              BorderRadius.circular(12),
-
+          borderRadius: BorderRadius.circular(12),
           borderSide: const BorderSide(
             color: primaryBlue,
             width: 1.5,
           ),
         ),
       ),
-
       items: safeItems.map(
         (String item) {
           return DropdownMenuItem<String>(
             value: item,
-
             child: Text(
               item,
               maxLines: 1,
-              overflow:
-                  TextOverflow.ellipsis,
-
+              overflow: TextOverflow.ellipsis,
               style: const TextStyle(
                 color: darkNavy,
                 fontSize: 14,
@@ -467,11 +401,7 @@ class _AttendanceReportScreenState
           );
         },
       ).toList(),
-
-      onChanged:
-          safeItems.isEmpty
-              ? null
-              : onChanged,
+      onChanged: safeItems.isEmpty ? null : onChanged,
     );
   }
 
@@ -482,15 +412,12 @@ class _AttendanceReportScreenState
   Widget _buildReportActions() {
     return Container(
       padding: const EdgeInsets.all(16),
-
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(18),
-
         border: Border.all(
           color: const Color(0xFFE1E8F0),
         ),
-
         boxShadow: const [
           BoxShadow(
             color: Color(0x10000000),
@@ -499,11 +426,8 @@ class _AttendanceReportScreenState
           ),
         ],
       ),
-
       child: Column(
-        crossAxisAlignment:
-            CrossAxisAlignment.start,
-
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           const Row(
             children: [
@@ -512,9 +436,7 @@ class _AttendanceReportScreenState
                 color: primaryBlue,
                 size: 21,
               ),
-
               SizedBox(width: 8),
-
               Text(
                 'Report Actions',
                 style: TextStyle(
@@ -525,36 +447,27 @@ class _AttendanceReportScreenState
               ),
             ],
           ),
-
           const SizedBox(height: 12),
-
           _buildActionButton(
             icon: Icons.table_view_rounded,
             title: 'Generate Sheet',
-            subtitle:
-                'Create the attendance Excel sheet',
+            subtitle: 'Create the attendance Excel sheet',
             iconColor: successGreen,
             onTap: _generateSheet,
           ),
-
           const SizedBox(height: 10),
-
           _buildActionButton(
             icon: Icons.download_rounded,
             title: 'Download Sheet',
-            subtitle:
-                'Generate and save the attendance sheet',
+            subtitle: 'Generate and save the attendance sheet',
             iconColor: primaryBlue,
             onTap: _downloadSheet,
           ),
-
           const SizedBox(height: 10),
-
           _buildActionButton(
             icon: Icons.share_rounded,
             title: 'Export Sheet',
-            subtitle:
-                'Share the generated attendance sheet',
+            subtitle: 'Share the generated attendance sheet',
             iconColor: cyan,
             onTap: _exportSheet,
           ),
@@ -576,54 +489,37 @@ class _AttendanceReportScreenState
   }) {
     return Material(
       color: Colors.transparent,
-
       child: InkWell(
-        borderRadius:
-            BorderRadius.circular(14),
-
+        borderRadius: BorderRadius.circular(14),
         onTap: _loading ? null : onTap,
-
         child: Container(
           padding: const EdgeInsets.all(14),
-
           decoration: BoxDecoration(
             color: const Color(0xFFFAFCFE),
-
-            borderRadius:
-                BorderRadius.circular(14),
-
+            borderRadius: BorderRadius.circular(14),
             border: Border.all(
               color: const Color(0xFFE3EAF1),
             ),
           ),
-
           child: Row(
             children: [
               Container(
                 height: 46,
                 width: 46,
-
                 decoration: BoxDecoration(
-                  color:
-                      iconColor.withOpacity(0.10),
-                  borderRadius:
-                      BorderRadius.circular(12),
+                  color: iconColor.withOpacity(0.10),
+                  borderRadius: BorderRadius.circular(12),
                 ),
-
                 child: Icon(
                   icon,
                   color: iconColor,
                   size: 24,
                 ),
               ),
-
               const SizedBox(width: 13),
-
               Expanded(
                 child: Column(
-                  crossAxisAlignment:
-                      CrossAxisAlignment.start,
-
+                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
                       title,
@@ -633,9 +529,7 @@ class _AttendanceReportScreenState
                         fontWeight: FontWeight.bold,
                       ),
                     ),
-
                     const SizedBox(height: 3),
-
                     Text(
                       subtitle,
                       style: const TextStyle(
@@ -646,7 +540,6 @@ class _AttendanceReportScreenState
                   ],
                 ),
               ),
-
               const Icon(
                 Icons.arrow_forward_ios_rounded,
                 color: primaryNavy,
@@ -666,25 +559,20 @@ class _AttendanceReportScreenState
   Widget _buildGeneratedFileCard() {
     return Container(
       padding: const EdgeInsets.all(14),
-
       decoration: BoxDecoration(
         color: const Color(0xFFEAF8F1),
         borderRadius: BorderRadius.circular(14),
-
         border: Border.all(
           color: const Color(0xFFB9E5CE),
         ),
       ),
-
       child: Row(
         children: [
           const Icon(
             Icons.check_circle_rounded,
             color: successGreen,
           ),
-
           const SizedBox(width: 10),
-
           const Expanded(
             child: Text(
               'Attendance sheet generated successfully.',
@@ -734,9 +622,7 @@ class _AttendanceReportScreenState
     });
 
     try {
-      final String filePath =
-          await _exportService
-              .exportAttendanceSheet(
+      final String filePath = await _exportService.exportAttendanceSheet(
         branch: _selectedBranch!,
         year: _selectedYear!,
         course: _selectedCourse!,
@@ -786,9 +672,7 @@ class _AttendanceReportScreenState
     });
 
     try {
-      final String filePath =
-          await _exportService
-              .exportAttendanceSheet(
+      final String filePath = await _exportService.exportAttendanceSheet(
         branch: _selectedBranch!,
         year: _selectedYear!,
         course: _selectedCourse!,
@@ -838,8 +722,7 @@ class _AttendanceReportScreenState
     });
 
     try {
-      await _exportService
-          .shareAttendanceSheet(
+      await _exportService.shareAttendanceSheet(
         branch: _selectedBranch!,
         year: _selectedYear!,
         course: _selectedCourse!,
@@ -888,22 +771,11 @@ class _AttendanceReportScreenState
       ..showSnackBar(
         SnackBar(
           content: Text(message),
-
-          backgroundColor:
-              isError
-                  ? Colors.red.shade700
-                  : successGreen,
-
-          behavior:
-              SnackBarBehavior.floating,
-
-          margin:
-              const EdgeInsets.all(16),
-
-          shape:
-              RoundedRectangleBorder(
-            borderRadius:
-                BorderRadius.circular(12),
+          backgroundColor: isError ? Colors.red.shade700 : successGreen,
+          behavior: SnackBarBehavior.floating,
+          margin: const EdgeInsets.all(16),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(12),
           ),
         ),
       );
