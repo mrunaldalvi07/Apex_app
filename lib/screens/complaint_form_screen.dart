@@ -123,6 +123,8 @@ class _ComplaintFormScreenState extends State<ComplaintFormScreen> {
                 const SizedBox(height: 20),
                 TextField(
                   controller: titleController,
+                  maxLength: 120,
+                  textCapitalization: TextCapitalization.sentences,
                   decoration: const InputDecoration(
                     labelText: 'Complaint Title',
                     prefixIcon: Icon(Icons.title),
@@ -133,6 +135,8 @@ class _ComplaintFormScreenState extends State<ComplaintFormScreen> {
                 TextField(
                   controller: descriptionController,
                   maxLines: 4,
+                  maxLength: 2000,
+                  textCapitalization: TextCapitalization.sentences,
                   decoration: const InputDecoration(
                     labelText: 'Complaint Description',
                     prefixIcon: Icon(Icons.description),
@@ -167,9 +171,8 @@ class _ComplaintFormScreenState extends State<ComplaintFormScreen> {
                             setState(() => _isSubmitting = true);
 
                             final complaint = Complaint(
-                              complaintId: DateTime.now()
-                                  .millisecondsSinceEpoch
-                                  .toString(),
+                              complaintId:
+                                  ComplaintService().createComplaintId(),
                               title: title,
                               description: description,
                               category: selectedCategory,

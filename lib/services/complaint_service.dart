@@ -5,6 +5,21 @@ import 'package:firebase_auth/firebase_auth.dart';
 class ComplaintService {
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
 
+  String createComplaintId() => _firestore.collection('complaints').doc().id;
+
+  Future<void> _requireStaffRole() async {
+    final user = FirebaseAuth.instance.currentUser;
+    if (user == null) {
+      throw StateError('Please sign in before managing complaints.');
+    }
+
+    final userDoc = await _firestore.collection('users').doc(user.uid).get();
+    final role = userDoc.data()?['role'];
+    if (role != 'faculty' && role != 'admin') {
+      throw StateError('Only faculty or administrators can manage complaints.');
+    }
+  }
+
   Future<void> addComplaint(Complaint complaint) async {
     final user = FirebaseAuth.instance.currentUser;
     if (user == null) {
@@ -48,27 +63,22 @@ class ComplaintService {
     }).toList();
   }
 
-  Future<void> updateComplaintStatus(
-    String complaintId,
-    String newStatus,
-  ) async {
+  Future<void> updateComplaint({
+    required String complaintId,
+    required String status,
+    required String facultyRemark,
+  }) async {
+    await _requireStaffRole();
     await _firestore.collection('complaints').doc(complaintId).update({
-      'status': newStatus,
-    });
-  }
-
-  Future<void> updateFacultyRemark(
-    String complaintId,
-    String remark,
-  ) async {
-    await _firestore.collection('complaints').doc(complaintId).update({
-      'facultyRemark': remark,
+      'status': status,
+      'facultyRemark': facultyRemark,
     });
   }
 
   Future<void> deleteComplaint(
     String complaintId,
   ) async {
+    await _requireStaffRole();
     await _firestore.collection('complaints').doc(complaintId).delete();
   }
 

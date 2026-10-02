@@ -23,8 +23,9 @@ class AnalyticsScreen extends StatelessWidget {
       body: Container(
         decoration:
             const BoxDecoration(gradient: ComplaintPalette.pageGradient),
-        child: FutureBuilder<QuerySnapshot>(
-          future: FirebaseFirestore.instance.collection('complaints').get(),
+        child: StreamBuilder<QuerySnapshot>(
+          stream:
+              FirebaseFirestore.instance.collection('complaints').snapshots(),
           builder: (context, snapshot) {
             if (snapshot.connectionState == ConnectionState.waiting) {
               return const Center(

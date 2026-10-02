@@ -105,7 +105,7 @@ class CrDashboard extends StatelessWidget {
                   MaterialPageRoute(
                     builder: (_) => const ComplaintListScreen(
                       showOnlyMyComplaints: false,
-                      isFaculty: true,
+                      isFaculty: false,
                     ),
                   ),
                 );

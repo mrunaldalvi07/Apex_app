@@ -23,6 +23,8 @@ class _ComplaintDetailsScreenState extends State<ComplaintDetailsScreen> {
   late String originalRemark;
   late String originalStatus;
   bool hasUnsavedChanges = false;
+  bool _isSaving = false;
+  bool _isDeleting = false;
 
   @override
   void initState() {
@@ -73,8 +75,8 @@ class _ComplaintDetailsScreenState extends State<ComplaintDetailsScreen> {
                 TextButton(
                   onPressed: () async {
                     Navigator.of(context).pop(false);
-                    await _saveChanges();
-                    if (context.mounted) {
+                    final saved = await _saveChanges();
+                    if (saved && context.mounted) {
                       Navigator.pop(context);
                     }
                   },
@@ -87,21 +89,15 @@ class _ComplaintDetailsScreenState extends State<ComplaintDetailsScreen> {
         false;
   }
 
-  Future<void> _saveChanges() async {
+  Future<bool> _saveChanges() async {
+    if (_isSaving) return false;
     try {
-      if (remarkController.text != originalRemark) {
-        await ComplaintService().updateFacultyRemark(
-          widget.complaint.complaintId,
-          remarkController.text.trim(),
-        );
-      }
-
-      if (selectedStatus != originalStatus) {
-        await ComplaintService().updateComplaintStatus(
-          widget.complaint.complaintId,
-          selectedStatus,
-        );
-      }
+      setState(() => _isSaving = true);
+      await ComplaintService().updateComplaint(
+        complaintId: widget.complaint.complaintId,
+        status: selectedStatus,
+        facultyRemark: remarkController.text.trim(),
+      );
 
       if (mounted) {
         setState(() {
@@ -114,11 +110,17 @@ class _ComplaintDetailsScreenState extends State<ComplaintDetailsScreen> {
           const SnackBar(content: Text('Changes saved successfully!')),
         );
       }
+      return true;
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(
           context,
         ).showSnackBar(SnackBar(content: Text('Error saving changes: $e')));
+      }
+      return false;
+    } finally {
+      if (mounted) {
+        setState(() => _isSaving = false);
       }
     }
   }
@@ -382,7 +384,9 @@ class _ComplaintDetailsScreenState extends State<ComplaintDetailsScreen> {
                           'Save Changes',
                           style: TextStyle(fontSize: 16),
                         ),
-                        onPressed: hasUnsavedChanges ? _saveChanges : null,
+                        onPressed: hasUnsavedChanges && !_isSaving
+                            ? _saveChanges
+                            : null,
                       ),
                     ),
                     const SizedBox(height: 15),
@@ -399,43 +403,61 @@ class _ComplaintDetailsScreenState extends State<ComplaintDetailsScreen> {
                           backgroundColor: const Color(0xFF8B3A3A),
                           foregroundColor: ComplaintPalette.white,
                         ),
-                        onPressed: () async {
-                          bool? confirm = await showDialog<bool>(
-                            context: context,
-                            builder: (context) {
-                              return AlertDialog(
-                                title: const Text('Delete Complaint'),
-                                content: const Text(
-                                  'Are you sure you want to delete this complaint?',
-                                ),
-                                actions: [
-                                  TextButton(
-                                    onPressed: () {
-                                      Navigator.pop(context, false);
-                                    },
-                                    child: const Text('Cancel'),
-                                  ),
-                                  TextButton(
-                                    onPressed: () {
-                                      Navigator.pop(context, true);
-                                    },
-                                    child: const Text('Delete'),
-                                  ),
-                                ],
-                              );
-                            },
-                          );
+                        onPressed: _isDeleting
+                            ? null
+                            : () async {
+                                bool? confirm = await showDialog<bool>(
+                                  context: context,
+                                  builder: (context) {
+                                    return AlertDialog(
+                                      title: const Text('Delete Complaint'),
+                                      content: const Text(
+                                        'Are you sure you want to delete this complaint?',
+                                      ),
+                                      actions: [
+                                        TextButton(
+                                          onPressed: () {
+                                            Navigator.pop(context, false);
+                                          },
+                                          child: const Text('Cancel'),
+                                        ),
+                                        TextButton(
+                                          onPressed: () {
+                                            Navigator.pop(context, true);
+                                          },
+                                          child: const Text('Delete'),
+                                        ),
+                                      ],
+                                    );
+                                  },
+                                );
 
-                          if (confirm == true) {
-                            await ComplaintService().deleteComplaint(
-                              complaint.complaintId,
-                            );
-
-                            if (context.mounted) {
-                              Navigator.pop(context);
-                            }
-                          }
-                        },
+                                if (confirm == true) {
+                                  setState(() => _isDeleting = true);
+                                  try {
+                                    await ComplaintService().deleteComplaint(
+                                      complaint.complaintId,
+                                    );
+                                    if (context.mounted) {
+                                      Navigator.pop(context);
+                                    }
+                                  } catch (error) {
+                                    if (context.mounted) {
+                                      ScaffoldMessenger.of(context)
+                                          .showSnackBar(
+                                        SnackBar(
+                                          content:
+                                              Text('Unable to delete: $error'),
+                                        ),
+                                      );
+                                    }
+                                  } finally {
+                                    if (mounted) {
+                                      setState(() => _isDeleting = false);
+                                    }
+                                  }
+                                }
+                              },
                       ),
                     ),
                     const SizedBox(height: 20),
