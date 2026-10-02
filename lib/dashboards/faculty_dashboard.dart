@@ -73,22 +73,6 @@ class FacultyDashboard extends StatelessWidget {
           children: [
             dashboardCard(
               context,
-              Icons.report_problem,
-              "Complaint\nManagement",
-              const Color.fromARGB(255, 134, 99, 182),
-
-              () {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    builder: (_) => const ComplaintManagementScreen(),
-                  ),
-                );
-              },
-            ),
-
-            dashboardCard(
-              context,
               Icons.fact_check,
               "Attendance\nIndicator",
               Colors.green,
@@ -103,21 +87,6 @@ class FacultyDashboard extends StatelessWidget {
             ),
             dashboardCard(
               context,
-              Icons.meeting_room,
-              "Classroom\nScheduler",
-              Colors.orange,
-              () {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    builder: (_) => const ClassroomManagementScreen(),
-                  ),
-                );
-              },
-            ),
-
-            dashboardCard(
-              context,
               Icons.campaign,
               "Notice\nManagement",
               Colors.blue,
@@ -126,6 +95,34 @@ class FacultyDashboard extends StatelessWidget {
                   context,
                   MaterialPageRoute(
                     builder: (_) => const FacultyNoticeScreen(),
+                  ),
+                );
+              },
+            ),
+            dashboardCard(
+              context,
+              Icons.report_problem,
+              "Complaint\nManagement",
+              const Color.fromARGB(255, 134, 99, 182),
+              () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (_) => const ComplaintManagementScreen(),
+                  ),
+                );
+              },
+            ),
+            dashboardCard(
+              context,
+              Icons.meeting_room,
+              "Classroom\nScheduler",
+              Colors.orange,
+              () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (_) => const ClassroomManagementScreen(),
                   ),
                 );
               },

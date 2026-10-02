@@ -70,21 +70,6 @@ class AdminDashboard extends StatelessWidget {
           children: [
             dashboardCard(
               context,
-              Icons.report_problem,
-              "Complaint\nManagement",
-              const Color.fromARGB(255, 134, 99, 182),
-              () {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    builder: (_) => const ComplaintManagementScreen(),
-                  ),
-                );
-              },
-            ),
-
-            dashboardCard(
-              context,
               Icons.fact_check,
               "Attendance\nIndicator",
               Colors.green,
@@ -97,7 +82,32 @@ class AdminDashboard extends StatelessWidget {
                 );
               },
             ),
-
+            dashboardCard(
+              context,
+              Icons.campaign,
+              "Notice\nManagement",
+              Colors.blue,
+              () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (_) => const AdminNoticeScreen()),
+                );
+              },
+            ),
+            dashboardCard(
+              context,
+              Icons.report_problem,
+              "Complaint\nManagement",
+              const Color.fromARGB(255, 134, 99, 182),
+              () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (_) => const ComplaintManagementScreen(),
+                  ),
+                );
+              },
+            ),
             dashboardCard(
               context,
               Icons.meeting_room,
@@ -109,19 +119,6 @@ class AdminDashboard extends StatelessWidget {
                   MaterialPageRoute(
                     builder: (_) => const ClassroomManagementScreen(),
                   ),
-                );
-              },
-            ),
-
-            dashboardCard(
-              context,
-              Icons.campaign,
-              "Notice\nManagement",
-              Colors.blue,
-              () {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(builder: (_) => const AdminNoticeScreen()),
                 );
               },
             ),

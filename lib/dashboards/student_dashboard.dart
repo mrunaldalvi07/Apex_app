@@ -74,22 +74,6 @@ class StudentDashboard extends StatelessWidget {
           children: [
             dashboardCard(
               context,
-              Icons.report_problem,
-              "Complaint\nManagement",
-              const Color.fromRGBO(134, 99, 182, 1),
-
-              () {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    builder: (_) => const StudentComplaintScreen(),
-                  ),
-                );
-              },
-            ),
-
-            dashboardCard(
-              context,
               Icons.fact_check,
               "Attendance\nIndicator",
               Colors.green,
@@ -102,20 +86,6 @@ class StudentDashboard extends StatelessWidget {
                 );
               },
             ),
-
-            dashboardCard(
-              context,
-              Icons.meeting_room,
-              "Classroom\nScheduler",
-              Colors.orange,
-              () {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(builder: (_) => const ClassroomScreen()),
-                );
-              },
-            ),
-
             dashboardCard(
               context,
               Icons.campaign,
@@ -127,6 +97,32 @@ class StudentDashboard extends StatelessWidget {
                   MaterialPageRoute(
                     builder: (_) => const StudentNoticeScreen(),
                   ),
+                );
+              },
+            ),
+            dashboardCard(
+              context,
+              Icons.report_problem,
+              "Complaint\nManagement",
+              const Color.fromRGBO(134, 99, 182, 1),
+              () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (_) => const StudentComplaintScreen(),
+                  ),
+                );
+              },
+            ),
+            dashboardCard(
+              context,
+              Icons.meeting_room,
+              "Classroom\nScheduler",
+              Colors.orange,
+              () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (_) => const ClassroomScreen()),
                 );
               },
             ),

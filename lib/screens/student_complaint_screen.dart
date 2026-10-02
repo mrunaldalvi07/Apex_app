@@ -2,60 +2,128 @@ import 'package:flutter/material.dart';
 
 import 'complaint_form_screen.dart';
 import 'complaint_list_screen.dart';
+import '../theme/complaint_theme.dart';
 
 class StudentComplaintScreen extends StatelessWidget {
   const StudentComplaintScreen({super.key});
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text("Complaint Management"),
-      ),
-      body: Padding(
-        padding: const EdgeInsets.all(20),
-        child: Column(
-          children: [
-
-            SizedBox(
-              width: double.infinity,
-              child: ElevatedButton.icon(
-                icon: const Icon(Icons.add),
-                label: const Text("Register Complaint"),
-                onPressed: () {
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (_) =>
-                          const ComplaintFormScreen(),
-                    ),
-                  );
-                },
-              ),
-            ),
-
-            const SizedBox(height: 20),
-
-            SizedBox(
-              width: double.infinity,
-              child: ElevatedButton.icon(
-                icon: const Icon(Icons.list),
-                label: const Text("View My Complaints"),
-                onPressed: () {
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (_) =>
-                          const ComplaintListScreen(
-                        showOnlyMyComplaints: true,
-                        isFaculty: false,
+    return Theme(
+      data: ComplaintPalette.theme(context),
+      child: Scaffold(
+        appBar: AppBar(
+          backgroundColor: Colors.transparent,
+          foregroundColor: ComplaintPalette.white,
+          flexibleSpace: const DecoratedBox(
+            decoration:
+                BoxDecoration(gradient: ComplaintPalette.primaryGradient),
+          ),
+          title: const Text("Complaint Management"),
+        ),
+        body: Container(
+          decoration:
+              const BoxDecoration(gradient: ComplaintPalette.pageGradient),
+          child: Padding(
+            padding: const EdgeInsets.all(20),
+            child: Column(
+              children: [
+                SizedBox(
+                  width: double.infinity,
+                  child: Material(
+                    color: Colors.transparent,
+                    child: Ink(
+                      height: 64,
+                      decoration: const BoxDecoration(
+                        gradient: ComplaintPalette.primaryGradient,
+                        borderRadius: BorderRadius.all(Radius.circular(8)),
+                      ),
+                      child: InkWell(
+                        borderRadius:
+                            const BorderRadius.all(Radius.circular(8)),
+                        onTap: () {
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (_) => const ComplaintFormScreen(),
+                            ),
+                          );
+                        },
+                        child: const Padding(
+                          padding: EdgeInsets.symmetric(horizontal: 20),
+                          child: Row(
+                            children: [
+                              Icon(Icons.add_circle_outline,
+                                  color: Colors.white),
+                              SizedBox(width: 14),
+                              Text('Register Complaint',
+                                  style: TextStyle(
+                                      color: Colors.white,
+                                      fontWeight: FontWeight.w700)),
+                              Spacer(),
+                              Icon(Icons.arrow_forward_rounded,
+                                  color: Colors.white),
+                            ],
+                          ),
+                        ),
                       ),
                     ),
-                  );
-                },
-              ),
+                  ),
+                ),
+                const SizedBox(height: 14),
+                SizedBox(
+                  width: double.infinity,
+                  child: Material(
+                    color: Colors.transparent,
+                    child: Ink(
+                      height: 64,
+                      decoration: const BoxDecoration(
+                        gradient: LinearGradient(
+                          colors: [
+                            ComplaintPalette.teal,
+                            ComplaintPalette.cyan
+                          ],
+                        ),
+                        borderRadius: BorderRadius.all(Radius.circular(8)),
+                      ),
+                      child: InkWell(
+                        borderRadius:
+                            const BorderRadius.all(Radius.circular(8)),
+                        onTap: () {
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (_) => const ComplaintListScreen(
+                                showOnlyMyComplaints: true,
+                                isFaculty: false,
+                              ),
+                            ),
+                          );
+                        },
+                        child: const Padding(
+                          padding: EdgeInsets.symmetric(horizontal: 20),
+                          child: Row(
+                            children: [
+                              Icon(Icons.list_alt_outlined,
+                                  color: Colors.white),
+                              SizedBox(width: 14),
+                              Text('View My Complaints',
+                                  style: TextStyle(
+                                      color: Colors.white,
+                                      fontWeight: FontWeight.w700)),
+                              Spacer(),
+                              Icon(Icons.arrow_forward_rounded,
+                                  color: Colors.white),
+                            ],
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+              ],
             ),
-          ],
+          ),
         ),
       ),
     );

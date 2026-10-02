@@ -70,25 +70,6 @@ class CrDashboard extends StatelessWidget {
           children: [
             dashboardCard(
               context,
-              Icons.report_problem,
-              "Complaint\nManagement",
-              const Color.fromARGB(255, 134, 99, 182),
-
-              () {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    builder: (_) => const ComplaintListScreen(
-                      showOnlyMyComplaints: false,
-                      isFaculty: true,
-                    ),
-                  ),
-                );
-              },
-            ),
-
-            dashboardCard(
-              context,
               Icons.fact_check,
               "Attendance\nIndicator",
               Colors.green,
@@ -101,7 +82,35 @@ class CrDashboard extends StatelessWidget {
                 );
               },
             ),
-
+            dashboardCard(
+              context,
+              Icons.campaign,
+              "Notice\nManagement",
+              Colors.blue,
+              () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (_) => const CRNoticeScreen()),
+                );
+              },
+            ),
+            dashboardCard(
+              context,
+              Icons.report_problem,
+              "Complaint\nManagement",
+              const Color.fromARGB(255, 134, 99, 182),
+              () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (_) => const ComplaintListScreen(
+                      showOnlyMyComplaints: false,
+                      isFaculty: true,
+                    ),
+                  ),
+                );
+              },
+            ),
             dashboardCard(
               context,
               Icons.meeting_room,
@@ -113,19 +122,6 @@ class CrDashboard extends StatelessWidget {
                   MaterialPageRoute(
                     builder: (_) => const ClassroomManagementScreen(),
                   ),
-                );
-              },
-            ),
-
-            dashboardCard(
-              context,
-              Icons.campaign,
-              "Notice\nManagement",
-              Colors.blue,
-              () {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(builder: (_) => const CRNoticeScreen()),
                 );
               },
             ),
