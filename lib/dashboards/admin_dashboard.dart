@@ -109,7 +109,7 @@ class AdminDashboard extends StatelessWidget {
               context,
               Icons.meeting_room,
               "Classroom\nScheduler",
-              Colors.orange,
+              const Color.fromARGB(255, 216, 134, 200),
               () {
                 Navigator.push(
                   context,
