@@ -6,51 +6,19 @@ import '../auth/login_screen.dart';
 import '../screens/attendance_management_screen.dart';
 import '../screens/classroom_management_screen.dart';
 import '../screens/admin_notice_screen.dart';
+import '../widgets/dashboard_module_card.dart';
 
 class AdminDashboard extends StatelessWidget {
   const AdminDashboard({super.key});
 
   Future<void> logout(BuildContext context) async {
     await FirebaseAuth.instance.signOut();
+    if (!context.mounted) return;
 
     Navigator.pushAndRemoveUntil(
       context,
       MaterialPageRoute(builder: (_) => const LoginScreen()),
       (route) => false,
-    );
-  }
-
-  Widget dashboardCard(
-    BuildContext context,
-    IconData icon,
-    String title,
-    Color color,
-    VoidCallback onTap,
-  ) {
-    return InkWell(
-      onTap: onTap,
-      borderRadius: BorderRadius.circular(15),
-      child: Card(
-        elevation: 5,
-        child: Container(
-          decoration: BoxDecoration(
-            color: color.withValues(alpha: 0.1),
-            borderRadius: BorderRadius.circular(15),
-          ),
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Icon(icon, size: 55, color: color),
-              const SizedBox(height: 15),
-              Text(
-                title,
-                textAlign: TextAlign.center,
-                style: const TextStyle(fontWeight: FontWeight.bold),
-              ),
-            ],
-          ),
-        ),
-      ),
     );
   }
 
@@ -67,72 +35,69 @@ class AdminDashboard extends StatelessWidget {
           ),
         ],
       ),
-      body: Padding(
-        padding: const EdgeInsets.all(20),
-        child: GridView.count(
-          crossAxisCount: 2,
-          crossAxisSpacing: 20,
-          mainAxisSpacing: 20,
-          children: [
-            dashboardCard(
-              context,
-              Icons.report_problem,
-              "Complaint\nManagement",
-              Colors.red,
-              () {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    builder: (_) => const ComplaintManagementScreen(),
-                  ),
-                );
-              },
+      body: LayoutBuilder(
+        builder: (context, constraints) {
+          final isDesktop = constraints.maxWidth >= 900;
+          return GridView(
+            padding: const EdgeInsets.all(20),
+            gridDelegate: SliverGridDelegateWithMaxCrossAxisExtent(
+              maxCrossAxisExtent: isDesktop ? 250 : 320,
+              mainAxisExtent: isDesktop ? 155 : 175,
+              crossAxisSpacing: 16,
+              mainAxisSpacing: 16,
             ),
-
-            dashboardCard(
-              context,
-              Icons.fact_check,
-              "Attendance\nIndicator",
-              Colors.green,
-              () {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    builder: (_) => const AttendanceManagementScreen(),
-                  ),
-                );
-              },
-            ),
-
-            dashboardCard(
-              context,
-              Icons.meeting_room,
-              "Classroom\nScheduler",
-              const Color.fromARGB(255, 216, 134, 200),
-              () {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    builder: (_) => const ClassroomManagementScreen(),
-                  ),
-                );
-              },
-            ),
-
-            dashboardCard(
-              context,
-              Icons.campaign,
-              "Notice\nManagement",
-              Colors.blue,
-              () {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(builder: (_) => const AdminNoticeScreen()),
-                );
-              },
-            ),
-          ],
-        ),
+            children: [
+              DashboardModuleCard(
+                icon: Icons.fact_check,
+                title: 'Attendance\nIndicator',
+                onTap: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (_) => const AttendanceManagementScreen(),
+                    ),
+                  );
+                },
+              ),
+              DashboardModuleCard(
+                icon: Icons.meeting_room,
+                title: 'Classroom\nScheduler',
+                onTap: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (_) => const ClassroomManagementScreen(),
+                    ),
+                  );
+                },
+              ),
+              DashboardModuleCard(
+                icon: Icons.report_problem,
+                title: 'Complaint\nManagement',
+                onTap: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (_) => const ComplaintManagementScreen(),
+                    ),
+                  );
+                },
+              ),
+              DashboardModuleCard(
+                icon: Icons.campaign,
+                title: 'Notice\nManagement',
+                onTap: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (_) => const AdminNoticeScreen(),
+                    ),
+                  );
+                },
+              ),
+            ],
+          );
+        },
       ),
     );
   }

@@ -4,6 +4,7 @@ import '../screens/attendance_management_screen.dart';
 import '../screens/classroom_management_screen.dart';
 import '../screens/complaint_management_screen.dart';
 import '../screens/faculty_notice_screen.dart';
+import '../widgets/dashboard_module_card.dart';
 
 class FacultyDashboard extends StatelessWidget {
   const FacultyDashboard({super.key, required String uid});
@@ -11,44 +12,6 @@ class FacultyDashboard extends StatelessWidget {
   Future<void> logout(BuildContext context) async {
     await FirebaseAuth.instance.signOut();
     // AuthWrapper reacts to sign-out and displays LoginScreen.
-  }
-
-  Widget dashboardCard(
-    BuildContext context,
-    IconData icon,
-    String title,
-    Color color,
-    VoidCallback onTap,
-  ) {
-    return InkWell(
-      onTap: onTap,
-      borderRadius: BorderRadius.circular(15),
-      child: Card(
-        elevation: 5,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
-        child: Container(
-          decoration: BoxDecoration(
-            color: color.withValues(alpha: 0.1),
-            borderRadius: BorderRadius.circular(15),
-          ),
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Icon(icon, size: 55, color: color),
-              const SizedBox(height: 15),
-              Text(
-                title,
-                textAlign: TextAlign.center,
-                style: const TextStyle(
-                  fontSize: 17,
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
   }
 
   @override
@@ -64,19 +27,22 @@ class FacultyDashboard extends StatelessWidget {
           ),
         ],
       ),
-      body: Padding(
-        padding: const EdgeInsets.all(20),
-        child: GridView.count(
-          crossAxisCount: 2,
-          crossAxisSpacing: 20,
-          mainAxisSpacing: 20,
+      body: LayoutBuilder(
+        builder: (context, constraints) {
+          final isDesktop = constraints.maxWidth >= 900;
+          return GridView(
+            padding: const EdgeInsets.all(20),
+            gridDelegate: SliverGridDelegateWithMaxCrossAxisExtent(
+              maxCrossAxisExtent: isDesktop ? 250 : 320,
+              mainAxisExtent: isDesktop ? 155 : 175,
+              crossAxisSpacing: 16,
+              mainAxisSpacing: 16,
+            ),
           children: [
-            dashboardCard(
-              context,
-              Icons.fact_check,
-              "Attendance\nIndicator",
-              Colors.green,
-              () {
+            DashboardModuleCard(
+              icon: Icons.fact_check,
+              title: 'Attendance\nIndicator',
+              onTap: () {
                 Navigator.push(
                   context,
                   MaterialPageRoute(
@@ -85,40 +51,10 @@ class FacultyDashboard extends StatelessWidget {
                 );
               },
             ),
-            dashboardCard(
-              context,
-              Icons.campaign,
-              "Notice\nManagement",
-              Colors.blue,
-              () {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    builder: (_) => const FacultyNoticeScreen(),
-                  ),
-                );
-              },
-            ),
-            dashboardCard(
-              context,
-              Icons.report_problem,
-              "Complaint\nManagement",
-              const Color.fromARGB(255, 134, 99, 182),
-              () {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    builder: (_) => const ComplaintManagementScreen(),
-                  ),
-                );
-              },
-            ),
-            dashboardCard(
-              context,
-              Icons.meeting_room,
-              "Classroom\nScheduler",
-              Colors.orange,
-              () {
+            DashboardModuleCard(
+              icon: Icons.meeting_room,
+              title: 'Classroom\nScheduler',
+              onTap: () {
                 Navigator.push(
                   context,
                   MaterialPageRoute(
@@ -127,8 +63,33 @@ class FacultyDashboard extends StatelessWidget {
                 );
               },
             ),
+            DashboardModuleCard(
+              icon: Icons.report_problem,
+              title: 'Complaint\nManagement',
+              onTap: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (_) => const ComplaintManagementScreen(),
+                  ),
+                );
+              },
+            ),
+            DashboardModuleCard(
+              icon: Icons.campaign,
+              title: 'Notice\nManagement',
+              onTap: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (_) => const FacultyNoticeScreen(),
+                  ),
+                );
+              },
+            ),
           ],
-        ),
+          );
+        },
       ),
     );
   }

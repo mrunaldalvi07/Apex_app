@@ -149,12 +149,8 @@ class _ComplaintDetailsScreenState extends State<ComplaintDetailsScreen> {
         data: ComplaintPalette.theme(context),
         child: Scaffold(
           appBar: AppBar(
-            backgroundColor: Colors.transparent,
-            foregroundColor: ComplaintPalette.white,
-            flexibleSpace: const DecoratedBox(
-              decoration:
-                  BoxDecoration(gradient: ComplaintPalette.primaryGradient),
-            ),
+            backgroundColor: ComplaintPalette.white,
+            foregroundColor: ComplaintPalette.darkNavy,
             title: const Text('Complaint Details'),
             leading: IconButton(
               icon: const Icon(Icons.arrow_back),
@@ -167,9 +163,8 @@ class _ComplaintDetailsScreenState extends State<ComplaintDetailsScreen> {
               },
             ),
           ),
-          body: Container(
-            decoration:
-                const BoxDecoration(gradient: ComplaintPalette.pageGradient),
+          body: ColoredBox(
+            color: ComplaintPalette.background,
             child: SingleChildScrollView(
               padding: const EdgeInsets.all(20),
               child: Column(

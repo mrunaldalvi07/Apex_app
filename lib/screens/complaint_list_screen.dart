@@ -103,12 +103,8 @@ class _ComplaintListScreenState extends State<ComplaintListScreen>
       data: ComplaintPalette.theme(context),
       child: Scaffold(
         appBar: AppBar(
-          backgroundColor: Colors.transparent,
-          foregroundColor: ComplaintPalette.white,
-          flexibleSpace: const DecoratedBox(
-            decoration:
-                BoxDecoration(gradient: ComplaintPalette.primaryGradient),
-          ),
+          backgroundColor: ComplaintPalette.white,
+          foregroundColor: ComplaintPalette.darkNavy,
           title: const Text('Complaints'),
           centerTitle: true,
           bottom: PreferredSize(
@@ -166,9 +162,8 @@ class _ComplaintListScreenState extends State<ComplaintListScreen>
             ),
           ),
         ),
-        body: Container(
-          decoration:
-              const BoxDecoration(gradient: ComplaintPalette.pageGradient),
+        body: ColoredBox(
+          color: ComplaintPalette.background,
           child: Column(
             children: [
               Padding(
