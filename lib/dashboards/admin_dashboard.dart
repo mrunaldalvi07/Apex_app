@@ -3,7 +3,6 @@ import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 
 import '../auth/login_screen.dart';
-import '../screens/complaint_list_screen.dart';
 import '../screens/attendance_management_screen.dart';
 import '../screens/classroom_management_screen.dart';
 import '../screens/admin_notice_screen.dart';

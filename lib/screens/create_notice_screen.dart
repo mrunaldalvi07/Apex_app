@@ -16,6 +16,7 @@ class CreateNoticeScreen extends StatefulWidget {
 
 class _CreateNoticeScreenState extends State<CreateNoticeScreen> {
   final _noticeformkey = GlobalKey<FormState>();
+
   bool faculty = false;
   bool students = false;
   bool ifStudent = false;
@@ -50,15 +51,10 @@ class _CreateNoticeScreenState extends State<CreateNoticeScreen> {
 
     if (result != null) {
       print(result.files.length);
+
       setState(() {
         selectedFiles.addAll(result.files);
       });
-    }
-
-    if (widget.notice != null) {
-      selectedFiles = widget.notice!.attachmentUrls
-          .map((name) => PlatformFile(name: name, size: 0))
-          .toList();
     }
   }
 
@@ -137,8 +133,6 @@ class _CreateNoticeScreenState extends State<CreateNoticeScreen> {
                         ),
                       ),
 
-                      // const SizedBox(height: 16),
-
                       // DESCRIPTION CARD
                       Card(
                         elevation: 2,
@@ -180,7 +174,7 @@ class _CreateNoticeScreenState extends State<CreateNoticeScreen> {
                         ),
                       ),
 
-                      // const SizedBox(height: 24),
+                      // RECIPIENTS CARD
                       Card(
                         elevation: 2,
                         shape: RoundedRectangleBorder(
@@ -266,6 +260,8 @@ class _CreateNoticeScreenState extends State<CreateNoticeScreen> {
                           ),
                         ),
                       ),
+
+                      // PIN CARD
                       Card(
                         elevation: 2,
                         shape: RoundedRectangleBorder(
@@ -292,6 +288,8 @@ class _CreateNoticeScreenState extends State<CreateNoticeScreen> {
                           ),
                         ),
                       ),
+
+                      // ATTACHMENTS CARD
                       Card(
                         elevation: 2,
                         shape: RoundedRectangleBorder(
@@ -366,6 +364,10 @@ class _CreateNoticeScreenState extends State<CreateNoticeScreen> {
                           ),
                         ),
                       ),
+
+                      const SizedBox(height: 16),
+
+                      // SEND / UPDATE BUTTON
                       SizedBox(
                         height: 50,
                         child: ElevatedButton(
@@ -373,13 +375,21 @@ class _CreateNoticeScreenState extends State<CreateNoticeScreen> {
                             if (_noticeformkey.currentState!.validate()) {
                               List<String> recipients = [];
 
-                              if (faculty) recipients.add("Faculty");
-                              if (ifStudent) recipients.add("IF");
-                              if (cmStudent) recipients.add("CM");
+                              if (faculty) {
+                                recipients.add("Faculty");
+                              }
 
-                              List<String> attachmentUrls = selectedFiles
-                                  .map((file) => file.name)
-                                  .toList();
+                              if (ifStudent) {
+                                recipients.add("IF");
+                              }
+
+                              if (cmStudent) {
+                                recipients.add("CM");
+                              }
+
+                              // For CREATE mode, attachments are uploaded
+                              // to Firebase Storage later.
+                              List<String> attachmentUrls = [];
 
                               final currentUser =
                                   FirebaseAuth.instance.currentUser;
@@ -407,15 +417,55 @@ class _CreateNoticeScreenState extends State<CreateNoticeScreen> {
 
                               if (widget.notice == null) {
                                 // CREATE MODE
-                                await NoticeService.createNotice(noticeData);
+
+                                // 1. Create notice and get document ID
+                                final noticeId =
+                                    await NoticeService.createNotice(
+                                      noticeData,
+                                    );
+
+                                // 2. Get local file paths
+                                print(
+                                  "Selected files: ${selectedFiles.length}",
+                                );
+
+                                for (final file in selectedFiles) {
+                                  print("File name: ${file.name}");
+                                  print("File path: ${file.path}");
+                                }
+
+                                final filePaths = selectedFiles
+                                    .where((file) => file.path != null)
+                                    .map((file) => file.path!)
+                                    .toList();
+
+                                print("File paths to upload: $filePaths");
+
+                                // 3. Upload files to Firebase Storage
+                                if (filePaths.isNotEmpty) {
+                                  final uploadedUrls =
+                                      await NoticeService.uploadNoticeAttachments(
+                                        noticeId,
+                                        filePaths,
+                                      );
+
+                                  // 4. Save uploaded URLs in Firestore
+                                  await NoticeService.updateNoticeAttachments(
+                                    noticeId,
+                                    uploadedUrls,
+                                  );
+                                }
                               } else {
                                 // EDIT MODE
+
                                 await NoticeService.updateNotice(
                                   widget.notice!.id!,
                                   noticeData,
                                 );
                               }
+
                               if (!mounted) return;
+
                               Navigator.pop(context);
                             }
                           },

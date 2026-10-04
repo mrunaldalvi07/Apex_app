@@ -465,17 +465,8 @@ class _NoticeDetailsScreenState extends State<NoticeDetailsScreen> {
                     // PINNED / STARRED INDICATION
                     // ------------------------------------------------
                     Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        if (notice.pinned) ...[
-                          const Icon(Icons.push_pin, size: 18),
-                          const SizedBox(width: 5),
-                        ],
-
-                        if (isStarred) ...[
-                          const Icon(Icons.star, size: 18),
-                          const SizedBox(width: 5),
-                        ],
-
                         Expanded(
                           child: Text(
                             notice.title,
@@ -485,6 +476,16 @@ class _NoticeDetailsScreenState extends State<NoticeDetailsScreen> {
                             ),
                           ),
                         ),
+
+                        if (notice.pinned) ...[
+                          const SizedBox(width: 8),
+                          const Icon(Icons.push_pin, size: 18),
+                        ],
+
+                        if (isStarred) ...[
+                          const SizedBox(width: 8),
+                          const Icon(Icons.star, size: 18),
+                        ],
                       ],
                     ),
 

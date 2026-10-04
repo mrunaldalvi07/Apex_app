@@ -30,10 +30,8 @@ class Notice {
       description: map['description'] ?? '',
       createdBy: map['createdBy'],
       createdByUid: map['createdByUid'],
-      createdAt: map['createdAt'] != null ? map['createdAt'].toDate() : null,
-      lastUpdated: map['lastUpdated'] != null
-          ? map['lastUpdated'].toDate()
-          : null,
+      createdAt: map['createdAt']?.toDate(),
+      lastUpdated: map['lastUpdated']?.toDate(),
       recipients: List<String>.from(map['recipients'] ?? []),
       attachmentUrls: List<String>.from(map['attachmentUrls'] ?? []),
       pinned: map['pinned'] ?? false,

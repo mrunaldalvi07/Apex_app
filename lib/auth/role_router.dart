@@ -15,9 +15,7 @@ class RoleRouter extends StatelessWidget {
     final user = FirebaseAuth.instance.currentUser;
 
     if (user == null) {
-      return const Scaffold(
-        body: Center(child: Text("User not found")),
-      );
+      return const Scaffold(body: Center(child: Text("User not found")));
     }
 
     return FutureBuilder<DocumentSnapshot>(
@@ -28,23 +26,20 @@ class RoleRouter extends StatelessWidget {
       builder: (context, snapshot) {
         if (!snapshot.hasData) {
           return const Scaffold(
-            body: Center(
-              child: CircularProgressIndicator(),
-            ),
+            body: Center(child: CircularProgressIndicator()),
           );
         }
 
-        final data =
-            snapshot.data!.data() as Map<String, dynamic>;
+        final data = snapshot.data!.data() as Map<String, dynamic>;
 
         final role = data['role'];
 
         switch (role) {
           case 'student':
-            return const StudentDashboard(uid: '',);
+            return const StudentDashboard(uid: '');
 
           case 'faculty':
-            return const FacultyDashboard(uid: '',);
+            return const FacultyDashboard(uid: '');
 
           case 'cr':
             return const CrDashboard();
@@ -53,11 +48,7 @@ class RoleRouter extends StatelessWidget {
             return const AdminDashboard();
 
           default:
-            return const Scaffold(
-              body: Center(
-                child: Text("Invalid Role"),
-              ),
-            );
+            return const Scaffold(body: Center(child: Text("Invalid Role")));
         }
       },
     );

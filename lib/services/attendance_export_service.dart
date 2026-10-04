@@ -91,7 +91,7 @@ class AttendanceExportService {
         await getApplicationDocumentsDirectory();
 
     final file = File(
-      "${directory.path}/${year}_${branch}_${course}.xlsx",
+      "${directory.path}/${year}_${branch}_$course.xlsx",
     );
 
     Excel excel;

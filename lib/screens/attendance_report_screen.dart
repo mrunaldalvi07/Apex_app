@@ -130,7 +130,7 @@ class _AttendanceReportScreenState
         child: Column(
           children: [
             DropdownButtonFormField<String>(
-              value: selectedBranch,
+              initialValue: selectedBranch,
               decoration: const InputDecoration(
                 labelText: "Branch",
                 border: OutlineInputBorder(),
@@ -153,7 +153,7 @@ class _AttendanceReportScreenState
             const SizedBox(height: 15),
 
             DropdownButtonFormField<String>(
-              value: selectedYear,
+              initialValue: selectedYear,
               decoration: const InputDecoration(
                 labelText: "Year",
                 border: OutlineInputBorder(),
@@ -189,7 +189,7 @@ class _AttendanceReportScreenState
             const SizedBox(height: 15),
 
             DropdownButtonFormField<String>(
-              value: selectedMonth,
+              initialValue: selectedMonth,
               decoration: const InputDecoration(
                 labelText: "Month",
                 border: OutlineInputBorder(),

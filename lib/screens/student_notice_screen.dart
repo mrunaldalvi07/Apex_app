@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'notice_details_screen.dart';
 import '../models/notice.dart';
 import '../services/notice_service.dart';
@@ -13,8 +14,14 @@ class StudentNoticeScreen extends StatefulWidget {
 
 class _StudentNoticeScreenState extends State<StudentNoticeScreen> {
   final TextEditingController _searchController = TextEditingController();
+
   String searchQuery = "";
   Timer? _debounce;
+
+  bool showPinnedOnly = false;
+  bool showStarredOnly = false;
+
+  final Map<String, bool> starredStatus = {};
 
   TextSpan highlightText(String text, String query) {
     if (query.isEmpty) {
@@ -67,6 +74,30 @@ class _StudentNoticeScreenState extends State<StudentNoticeScreen> {
     }
   }
 
+  Future<void> loadStarredStatus() async {
+    final user = FirebaseAuth.instance.currentUser;
+
+    if (user == null) return;
+
+    final starredNotices = await NoticeService.getStarredNotices(user.uid);
+
+    if (!mounted) return;
+
+    setState(() {
+      starredStatus.clear();
+
+      for (final noticeId in starredNotices.keys) {
+        starredStatus[noticeId] = true;
+      }
+    });
+  }
+
+  @override
+  void initState() {
+    super.initState();
+    loadStarredStatus();
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -74,21 +105,41 @@ class _StudentNoticeScreenState extends State<StudentNoticeScreen> {
         backgroundColor: Theme.of(context).colorScheme.inversePrimary,
         title: const Text('Notices'),
         actions: [
+          // Starred filter
           IconButton(
-            icon: const Icon(Icons.push_pin),
-            tooltip: "Pin (Coming Soon)",
+            icon: Icon(showStarredOnly ? Icons.star : Icons.star_border),
+            tooltip: showStarredOnly
+                ? "Show All Notices"
+                : "Show Starred Notices",
             onPressed: () {
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(content: Text("Pin feature will be added soon")),
-              );
+              setState(() {
+                showStarredOnly = !showStarredOnly;
+              });
             },
           ),
-          const SizedBox(width: 25),
+
+          // Pinned filter
+          IconButton(
+            icon: Icon(
+              showPinnedOnly ? Icons.push_pin : Icons.push_pin_outlined,
+            ),
+            tooltip: showPinnedOnly
+                ? "Show All Notices"
+                : "Show Pinned Notices",
+            onPressed: () {
+              setState(() {
+                showPinnedOnly = !showPinnedOnly;
+              });
+            },
+          ),
+
+          const SizedBox(width: 10),
         ],
       ),
 
       body: Column(
         children: [
+          // Search bar
           Padding(
             padding: const EdgeInsets.only(
               left: 10,
@@ -113,7 +164,9 @@ class _StudentNoticeScreenState extends State<StudentNoticeScreen> {
                     border: InputBorder.none,
                   ),
                   onChanged: (value) {
-                    if (_debounce?.isActive ?? false) _debounce!.cancel();
+                    if (_debounce?.isActive ?? false) {
+                      _debounce!.cancel();
+                    }
 
                     _debounce = Timer(const Duration(milliseconds: 300), () {
                       setState(() {
@@ -126,6 +179,38 @@ class _StudentNoticeScreenState extends State<StudentNoticeScreen> {
             ),
           ),
 
+          // Filter heading
+          if (showPinnedOnly || showStarredOnly)
+            Padding(
+              padding: const EdgeInsets.only(
+                left: 16,
+                right: 16,
+                top: 16,
+                bottom: 10,
+              ),
+              child: Row(
+                children: [
+                  const Expanded(child: Divider(thickness: 1)),
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 12),
+                    child: Text(
+                      showPinnedOnly && showStarredOnly
+                          ? "Starred & Pinned Notices"
+                          : showPinnedOnly
+                          ? "Pinned Notices"
+                          : "Starred Notices",
+                      style: const TextStyle(
+                        fontSize: 20,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ),
+                  const Expanded(child: Divider(thickness: 1)),
+                ],
+              ),
+            ),
+
+          // Notices
           Expanded(
             child: StreamBuilder<List<Notice>>(
               stream: NoticeService.getNotices(),
@@ -141,12 +226,16 @@ class _StudentNoticeScreenState extends State<StudentNoticeScreen> {
                 final notices = snapshot.data!
                     .where(
                       (notice) =>
-                          notice.title.toLowerCase().contains(searchQuery) ||
-                          notice.description.toLowerCase().contains(
-                            searchQuery,
-                          ),
+                          (!showPinnedOnly || notice.pinned) &&
+                          (!showStarredOnly ||
+                              starredStatus[notice.id] == true) &&
+                          (notice.title.toLowerCase().contains(searchQuery) ||
+                              notice.description.toLowerCase().contains(
+                                searchQuery,
+                              )),
                     )
                     .toList();
+
                 if (notices.isEmpty) {
                   return const Center(child: Text("No matching notices found"));
                 }
@@ -174,10 +263,17 @@ class _StudentNoticeScreenState extends State<StudentNoticeScreen> {
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
+                              // Creator + pinned + star + date
                               Row(
                                 children: [
+                                  if (notice.pinned) ...[
+                                    const Icon(Icons.push_pin, size: 16),
+                                    const SizedBox(width: 4),
+                                  ],
+
                                   Text(
-                                    "Notice by: ${notice.createdBy ?? 'Unknown'}",
+                                    "Notice by: "
+                                    "${notice.createdBy ?? 'Unknown'}",
                                     style: const TextStyle(
                                       color: Colors.grey,
                                       fontSize: 13,
@@ -185,6 +281,11 @@ class _StudentNoticeScreenState extends State<StudentNoticeScreen> {
                                   ),
 
                                   const Spacer(),
+
+                                  if (starredStatus[notice.id] == true) ...[
+                                    const Icon(Icons.star, size: 16),
+                                    const SizedBox(width: 4),
+                                  ],
 
                                   Text(
                                     formatDateTime(notice.createdAt),
@@ -196,6 +297,7 @@ class _StudentNoticeScreenState extends State<StudentNoticeScreen> {
                                 ],
                               ),
 
+                              // Title + popup menu
                               Row(
                                 children: [
                                   Expanded(
@@ -216,24 +318,73 @@ class _StudentNoticeScreenState extends State<StudentNoticeScreen> {
                                     ),
                                   ),
 
-                                  IconButton(
-                                    icon: const Icon(Icons.push_pin_outlined),
-                                    tooltip: "Personal Pin (Coming Soon)",
-                                    onPressed: () {
-                                      ScaffoldMessenger.of(
-                                        context,
-                                      ).showSnackBar(
-                                        const SnackBar(
-                                          content: Text(
-                                            "Personal pin feature will be added soon",
-                                          ),
-                                        ),
-                                      );
+                                  // Student can only
+                                  // Star / Unstar.
+                                  PopupMenuButton<String>(
+                                    onSelected: (String value) async {
+                                      if (value == "star") {
+                                        final user =
+                                            FirebaseAuth.instance.currentUser;
+
+                                        if (user == null) {
+                                          return;
+                                        }
+
+                                        try {
+                                          await NoticeService.toggleStarNotice(
+                                            notice.id!,
+                                            user.uid,
+                                          );
+
+                                          if (!mounted) return;
+
+                                          setState(() {
+                                            starredStatus[notice.id!] =
+                                                !(starredStatus[notice.id!] ??
+                                                    false);
+                                          });
+                                        } catch (e) {
+                                          if (!mounted) return;
+
+                                          ScaffoldMessenger.of(
+                                            context,
+                                          ).showSnackBar(
+                                            SnackBar(
+                                              content: Text(
+                                                "Failed to update star: $e",
+                                              ),
+                                            ),
+                                          );
+                                        }
+                                      }
                                     },
+                                    itemBuilder: (context) => [
+                                      PopupMenuItem<String>(
+                                        value: "star",
+                                        child: Row(
+                                          children: [
+                                            Icon(
+                                              (starredStatus[notice.id] ??
+                                                      false)
+                                                  ? Icons.star
+                                                  : Icons.star_border,
+                                            ),
+                                            const SizedBox(width: 10),
+                                            Text(
+                                              (starredStatus[notice.id] ??
+                                                      false)
+                                                  ? "Unstar"
+                                                  : "Star",
+                                            ),
+                                          ],
+                                        ),
+                                      ),
+                                    ],
                                   ),
                                 ],
                               ),
 
+                              // Description
                               Text(
                                 notice.description,
                                 maxLines: 1,
@@ -243,6 +394,7 @@ class _StudentNoticeScreenState extends State<StudentNoticeScreen> {
 
                               const SizedBox(height: 5),
 
+                              // Attachments
                               if (notice.attachmentUrls
                                   .where((file) => file.trim().isNotEmpty)
                                   .isNotEmpty)

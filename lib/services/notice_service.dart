@@ -1,6 +1,8 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_storage/firebase_storage.dart';
+import 'package:file_picker/file_picker.dart';
+
 import '../models/notice.dart';
-import '../models/user.dart';
 
 class NoticeService {
   static final FirebaseFirestore _db = FirebaseFirestore.instance;
@@ -9,12 +11,47 @@ class NoticeService {
   // CREATE NOTICE
   // ============================================================
 
-  static Future<void> createNotice(Notice notice) async {
-    await _db.collection("notices").add({
+  static Future<String> createNotice(
+    Notice notice,
+    List<PlatformFile> files,
+  ) async {
+    final noticeRef = _db.collection("notices").doc();
+
+    final List<String> attachmentUrls = [];
+
+    // Upload attachments before creating the Firestore notice.
+    if (files.isNotEmpty) {
+      final storage = FirebaseStorage.instance;
+
+      for (final file in files) {
+        if (file.bytes == null) {
+          throw Exception("Could not read file: ${file.name}");
+        }
+
+        final storageRef = storage
+            .ref()
+            .child("notices")
+            .child(noticeRef.id)
+            .child(file.name);
+
+        await storageRef.putData(file.bytes!);
+
+        final downloadUrl = await storageRef.getDownloadURL();
+
+        attachmentUrls.add(downloadUrl);
+      }
+    }
+
+    // Firestore document is created only after
+    // all attachments are uploaded successfully.
+    await noticeRef.set({
       ...notice.toMap(),
+      "attachmentUrls": attachmentUrls,
       "createdAt": FieldValue.serverTimestamp(),
       "lastUpdated": FieldValue.serverTimestamp(),
     });
+
+    return noticeRef.id;
   }
 
   // ============================================================
@@ -95,16 +132,8 @@ class NoticeService {
     }
 
     if (starredNotices.containsKey(noticeId)) {
-      // --------------------------------------------------------
-      // UNSTAR
-      // --------------------------------------------------------
-
       starredNotices.remove(noticeId);
     } else {
-      // --------------------------------------------------------
-      // STAR
-      // --------------------------------------------------------
-
       starredNotices[noticeId] = FieldValue.serverTimestamp();
     }
 

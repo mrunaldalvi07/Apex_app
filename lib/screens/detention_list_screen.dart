@@ -304,8 +304,9 @@ class _DetentionListScreenState
                                             .attendancePercentage,
                                       );
 
-                                      if (!mounted)
+                                      if (!mounted) {
                                         return;
+                                      }
 
                                       ScaffoldMessenger.of(
                                               context)
