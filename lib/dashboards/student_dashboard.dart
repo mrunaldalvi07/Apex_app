@@ -15,7 +15,9 @@ class StudentDashboard extends StatelessWidget {
 
     Navigator.pushAndRemoveUntil(
       context,
-      MaterialPageRoute(builder: (_) => const LoginScreen()),
+      MaterialPageRoute(
+        builder: (_) => const LoginScreen(),
+      ),
       (route) => false,
     );
   }
@@ -32,7 +34,9 @@ class StudentDashboard extends StatelessWidget {
       borderRadius: BorderRadius.circular(15),
       child: Card(
         elevation: 5,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(15),
+        ),
         child: Container(
           decoration: BoxDecoration(
             color: color.withValues(alpha: 0.1),
@@ -41,7 +45,11 @@ class StudentDashboard extends StatelessWidget {
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              Icon(icon, size: 55, color: color),
+              Icon(
+                icon,
+                size: 55,
+                color: color,
+              ),
               const SizedBox(height: 15),
               Text(
                 title,
@@ -87,7 +95,8 @@ class StudentDashboard extends StatelessWidget {
                 Navigator.push(
                   context,
                   MaterialPageRoute(
-                    builder: (_) => const StudentComplaintScreen(),
+                    builder: (_) =>
+                        const StudentComplaintScreen(),
                   ),
                 );
               },
@@ -102,7 +111,8 @@ class StudentDashboard extends StatelessWidget {
                 Navigator.push(
                   context,
                   MaterialPageRoute(
-                    builder: (_) => const StudentLiveAttendanceScreen(),
+                    builder: (_) =>
+                        const StudentLiveAttendanceScreen(),
                   ),
                 );
               },
@@ -112,11 +122,19 @@ class StudentDashboard extends StatelessWidget {
               context,
               Icons.meeting_room,
               "Classroom\nScheduler",
-              Colors.orange,
+              const Color.fromARGB(
+                255,
+                199,
+                129,
+                217,
+              ),
               () {
                 Navigator.push(
                   context,
-                  MaterialPageRoute(builder: (_) => const ClassroomScreen()),
+                  MaterialPageRoute(
+                    builder: (_) =>
+                        const ClassroomScreen(),
+                  ),
                 );
               },
             ),
@@ -130,7 +148,8 @@ class StudentDashboard extends StatelessWidget {
                 Navigator.push(
                   context,
                   MaterialPageRoute(
-                    builder: (_) => const StudentNoticeScreen(),
+                    builder: (_) =>
+                        const StudentNoticeScreen(),
                   ),
                 );
               },

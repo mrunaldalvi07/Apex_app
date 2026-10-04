@@ -5,7 +5,7 @@ publish_to: 'none'
 version: 1.0.0+1
 
 environment:
-  sdk: ^3.12.0
+  sdk: ^3.0.0
 
 dependencies:
   flutter:
@@ -20,21 +20,23 @@ dependencies:
   firebase_storage: ^13.0.2
   firebase_messaging: ^16.0.0
 
-  # Google Authentication
-  google_sign_in: ^7.2.0
+  # Notifications
+  flutter_local_notifications: ^22.2.0
 
-  # File and document handling
+  # File handling
   file_picker: ^11.0.2
   open_file: ^3.5.10
+
+  # Excel / File export
   excel: ^4.0.6
   path_provider: ^2.1.6
-
-  # Sharing and location
   share_plus: ^12.0.2
-  geolocator: ^14.0.2
 
-  # Local notifications
-  flutter_local_notifications: ^22.2.0
+  # Location
+  geolocator: ^14.0.2
+  printing: ^5.14.3
+  pdf: ^3.12.0
+  google_sign_in: ^7.2.0
 
 dev_dependencies:
   flutter_test:
