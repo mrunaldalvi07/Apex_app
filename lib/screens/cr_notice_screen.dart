@@ -14,6 +14,21 @@ class CRNoticeScreen extends StatefulWidget {
 }
 
 class _CRNoticeScreenState extends State<CRNoticeScreen> {
+  static const Color gradientDarkBlue = Color(0xFF1B4980);
+  static const Color gradientBlue = Color(0xFF3272B4);
+  static const Color primaryBlue = Color(0xFF0C447B);
+  static const Color backgroundColor = Color(0xFFF4F7FC);
+  static const Color headingColor = Color(0xFF0F2C59);
+  static const Color mutedColor = Color(0xFF708090);
+  static const Color borderColor = Color(0xFFE1E8F0);
+
+  // Search bar gradient
+  static const Color searchGradientLight = Color(0xFFEAF3FC);
+  static const Color searchGradientBlue = Color(0xFFDCEBFA);
+
+  // Popup menu background
+  static const Color popupBackground = Color(0xFFF4F8FD);
+
   final TextEditingController _searchController = TextEditingController();
 
   String searchQuery = "";
@@ -46,7 +61,8 @@ class _CRNoticeScreenState extends State<CRNoticeScreen> {
         TextSpan(
           text: text.substring(start, end),
           style: const TextStyle(
-            backgroundColor: Colors.yellow,
+            backgroundColor: Color(0xFFDCEBFA),
+            color: primaryBlue,
             fontWeight: FontWeight.bold,
           ),
         ),
@@ -104,64 +120,90 @@ class _CRNoticeScreenState extends State<CRNoticeScreen> {
     final currentUser = FirebaseAuth.instance.currentUser;
 
     return Scaffold(
+      backgroundColor: backgroundColor,
       appBar: AppBar(
-        backgroundColor: Theme.of(context).colorScheme.inversePrimary,
-        title: const Text('Notices'),
+        backgroundColor: Colors.white,
+        elevation: 0,
+        surfaceTintColor: Colors.white,
+        title: const Text(
+          'Notices',
+          style: TextStyle(
+            color: headingColor,
+            fontSize: 21,
+            fontWeight: FontWeight.w700,
+          ),
+        ),
+        iconTheme: const IconThemeData(
+          color: headingColor,
+        ),
         actions: [
           IconButton(
-            icon: Icon(showStarredOnly ? Icons.star : Icons.star_border),
-            tooltip: showStarredOnly
-                ? "Show All Notices"
-                : "Show Starred Notices",
+            icon: Icon(
+              showStarredOnly ? Icons.star : Icons.star_border,
+              color: showStarredOnly ? primaryBlue : headingColor,
+            ),
+            tooltip:
+                showStarredOnly ? "Show All Notices" : "Show Starred Notices",
             onPressed: () {
               setState(() {
                 showStarredOnly = !showStarredOnly;
               });
             },
           ),
-
           IconButton(
             icon: Icon(
               showPinnedOnly ? Icons.push_pin : Icons.push_pin_outlined,
+              color: showPinnedOnly ? primaryBlue : headingColor,
             ),
-            tooltip: showPinnedOnly
-                ? "Show All Notices"
-                : "Show Pinned Notices",
+            tooltip:
+                showPinnedOnly ? "Show All Notices" : "Show Pinned Notices",
             onPressed: () {
               setState(() {
                 showPinnedOnly = !showPinnedOnly;
               });
             },
           ),
-
           IconButton(
-            icon: const Icon(Icons.add),
+            icon: const Icon(
+              Icons.add,
+              color: primaryBlue,
+            ),
             onPressed: () {
               Navigator.push(
                 context,
-                MaterialPageRoute(builder: (_) => CreateNoticeScreen()),
+                MaterialPageRoute(
+                  builder: (_) => CreateNoticeScreen(),
+                ),
               );
             },
           ),
-
           const SizedBox(width: 10),
         ],
       ),
-
       body: Column(
         children: [
           // Search bar
           Padding(
             padding: const EdgeInsets.only(
-              left: 10,
-              right: 10,
-              top: 10,
+              left: 12,
+              right: 12,
+              top: 12,
               bottom: 0,
             ),
-            child: Card(
-              elevation: 2,
-              shape: RoundedRectangleBorder(
+            child: Container(
+              decoration: BoxDecoration(
+                gradient: const LinearGradient(
+                  colors: [
+                    searchGradientLight,
+                    searchGradientBlue,
+                  ],
+                  begin: Alignment.centerLeft,
+                  end: Alignment.centerRight,
+                ),
                 borderRadius: BorderRadius.circular(30),
+                border: Border.all(
+                  color: borderColor,
+                ),
               ),
               child: Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 12),
@@ -171,7 +213,13 @@ class _CRNoticeScreenState extends State<CRNoticeScreen> {
                   decoration: const InputDecoration(
                     contentPadding: EdgeInsets.symmetric(vertical: 16),
                     hintText: "Search notices...",
-                    prefixIcon: Icon(Icons.search),
+                    hintStyle: TextStyle(
+                      color: mutedColor,
+                    ),
+                    prefixIcon: Icon(
+                      Icons.search,
+                      color: primaryBlue,
+                    ),
                     border: InputBorder.none,
                   ),
                   onChanged: (value) {
@@ -201,22 +249,33 @@ class _CRNoticeScreenState extends State<CRNoticeScreen> {
               ),
               child: Row(
                 children: [
-                  const Expanded(child: Divider(thickness: 1)),
+                  const Expanded(
+                    child: Divider(
+                      thickness: 1,
+                      color: Color(0xFFD6E0EC),
+                    ),
+                  ),
                   Padding(
                     padding: const EdgeInsets.symmetric(horizontal: 12),
                     child: Text(
                       showPinnedOnly && showStarredOnly
                           ? "Starred & Pinned Notices"
                           : showPinnedOnly
-                          ? "Pinned Notices"
-                          : "Starred Notices",
+                              ? "Pinned Notices"
+                              : "Starred Notices",
                       style: const TextStyle(
-                        fontSize: 20,
-                        fontWeight: FontWeight.bold,
+                        fontSize: 18,
+                        fontWeight: FontWeight.w700,
+                        color: headingColor,
                       ),
                     ),
                   ),
-                  const Expanded(child: Divider(thickness: 1)),
+                  const Expanded(
+                    child: Divider(
+                      thickness: 1,
+                      color: Color(0xFFD6E0EC),
+                    ),
+                  ),
                 ],
               ),
             ),
@@ -227,11 +286,23 @@ class _CRNoticeScreenState extends State<CRNoticeScreen> {
               stream: NoticeService.getNotices(),
               builder: (context, snapshot) {
                 if (snapshot.connectionState == ConnectionState.waiting) {
-                  return const Center(child: CircularProgressIndicator());
+                  return const Center(
+                    child: CircularProgressIndicator(
+                      color: primaryBlue,
+                    ),
+                  );
                 }
 
                 if (!snapshot.hasData || snapshot.data!.isEmpty) {
-                  return const Center(child: Text("No notices found"));
+                  return const Center(
+                    child: Text(
+                      "No notices found",
+                      style: TextStyle(
+                        color: mutedColor,
+                        fontSize: 15,
+                      ),
+                    ),
+                  );
                 }
 
                 final notices = snapshot.data!
@@ -242,41 +313,60 @@ class _CRNoticeScreenState extends State<CRNoticeScreen> {
                               starredStatus[notice.id] == true) &&
                           (notice.title.toLowerCase().contains(searchQuery) ||
                               notice.description.toLowerCase().contains(
-                                searchQuery,
-                              )),
+                                    searchQuery,
+                                  )),
                     )
                     .toList();
 
                 if (notices.isEmpty) {
-                  return const Center(child: Text("No matching notices found"));
+                  return const Center(
+                    child: Text(
+                      "No matching notices found",
+                      style: TextStyle(
+                        color: mutedColor,
+                        fontSize: 15,
+                      ),
+                    ),
+                  );
                 }
 
                 return ListView.builder(
-                  padding: const EdgeInsets.all(10),
+                  padding: const EdgeInsets.fromLTRB(12, 10, 12, 20),
                   itemCount: notices.length,
                   itemBuilder: (context, index) {
                     final notice = notices[index];
 
                     // Check whether this notice belongs to
                     // the currently logged-in CR.
-                    final isOwner =
-                        currentUser != null &&
+                    final isOwner = currentUser != null &&
                         notice.createdByUid == currentUser.uid;
 
                     return Card(
-                      margin: const EdgeInsets.only(bottom: 10),
+                      margin: const EdgeInsets.only(bottom: 12),
+                      elevation: 0,
+                      color: Colors.white,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(16),
+                        side: const BorderSide(
+                          color: borderColor,
+                        ),
+                      ),
                       child: InkWell(
+                        borderRadius: BorderRadius.circular(16),
                         onTap: () {
                           Navigator.push(
                             context,
                             MaterialPageRoute(
-                              builder: (context) =>
-                                  NoticeDetailsScreen(notice: notice),
+                              builder: (context) => NoticeDetailsScreen(
+                                notice: notice,
+                                showStarredOnly: showStarredOnly,
+                                showPinnedOnly: showPinnedOnly,
+                              ),
                             ),
                           );
                         },
                         child: Padding(
-                          padding: const EdgeInsets.all(10),
+                          padding: const EdgeInsets.all(13),
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
@@ -284,35 +374,42 @@ class _CRNoticeScreenState extends State<CRNoticeScreen> {
                               Row(
                                 children: [
                                   if (notice.pinned) ...[
-                                    const Icon(Icons.push_pin, size: 16),
+                                    const Icon(
+                                      Icons.push_pin,
+                                      size: 16,
+                                      color: primaryBlue,
+                                    ),
                                     const SizedBox(width: 4),
                                   ],
-
                                   Text(
                                     "Notice by: "
                                     "${notice.createdBy ?? 'Unknown'}",
                                     style: const TextStyle(
-                                      color: Colors.grey,
+                                      color: mutedColor,
                                       fontSize: 13,
+                                      fontWeight: FontWeight.w500,
                                     ),
                                   ),
-
                                   const Spacer(),
-
                                   if (starredStatus[notice.id] == true) ...[
-                                    const Icon(Icons.star, size: 16),
+                                    const Icon(
+                                      Icons.star,
+                                      size: 16,
+                                      color: primaryBlue,
+                                    ),
                                     const SizedBox(width: 4),
                                   ],
-
                                   Text(
                                     formatDateTime(notice.createdAt),
                                     style: const TextStyle(
-                                      color: Colors.grey,
+                                      color: mutedColor,
                                       fontSize: 12,
                                     ),
                                   ),
                                 ],
                               ),
+
+                              const SizedBox(height: 5),
 
                               // Title + popup menu
                               Row(
@@ -322,8 +419,8 @@ class _CRNoticeScreenState extends State<CRNoticeScreen> {
                                       text: TextSpan(
                                         style: const TextStyle(
                                           fontSize: 18,
-                                          fontWeight: FontWeight.bold,
-                                          color: Colors.black,
+                                          fontWeight: FontWeight.w700,
+                                          color: headingColor,
                                         ),
                                         children: [
                                           highlightText(
@@ -334,8 +431,13 @@ class _CRNoticeScreenState extends State<CRNoticeScreen> {
                                       ),
                                     ),
                                   ),
-
                                   PopupMenuButton<String>(
+                                    color: popupBackground,
+                                    surfaceTintColor: popupBackground,
+                                    icon: const Icon(
+                                      Icons.more_vert,
+                                      color: mutedColor,
+                                    ),
                                     onSelected: (String value) async {
                                       // STAR
                                       if (value == "star") {
@@ -362,9 +464,8 @@ class _CRNoticeScreenState extends State<CRNoticeScreen> {
                                         } catch (e) {
                                           if (!mounted) return;
 
-                                          ScaffoldMessenger.of(
-                                            context,
-                                          ).showSnackBar(
+                                          ScaffoldMessenger.of(context)
+                                              .showSnackBar(
                                             SnackBar(
                                               content: Text(
                                                 "Failed to update star: $e",
@@ -390,9 +491,8 @@ class _CRNoticeScreenState extends State<CRNoticeScreen> {
                                         } catch (e) {
                                           if (!mounted) return;
 
-                                          ScaffoldMessenger.of(
-                                            context,
-                                          ).showSnackBar(
+                                          ScaffoldMessenger.of(context)
+                                              .showSnackBar(
                                             SnackBar(
                                               content: Text(
                                                 "Failed to update pin: $e",
@@ -415,8 +515,8 @@ class _CRNoticeScreenState extends State<CRNoticeScreen> {
                                           MaterialPageRoute(
                                             builder: (context) =>
                                                 CreateNoticeScreen(
-                                                  notice: notice,
-                                                ),
+                                              notice: notice,
+                                            ),
                                           ),
                                         );
 
@@ -435,6 +535,10 @@ class _CRNoticeScreenState extends State<CRNoticeScreen> {
                                             return AlertDialog(
                                               title: const Text(
                                                 "Delete Notice",
+                                                style: TextStyle(
+                                                  color: headingColor,
+                                                  fontWeight: FontWeight.w700,
+                                                ),
                                               ),
                                               content: const Text(
                                                 "Are you sure you want to delete this notice?",
@@ -447,7 +551,12 @@ class _CRNoticeScreenState extends State<CRNoticeScreen> {
                                                       false,
                                                     );
                                                   },
-                                                  child: const Text("Cancel"),
+                                                  child: const Text(
+                                                    "Cancel",
+                                                    style: TextStyle(
+                                                      color: primaryBlue,
+                                                    ),
+                                                  ),
                                                 ),
                                                 TextButton(
                                                   onPressed: () {
@@ -456,7 +565,12 @@ class _CRNoticeScreenState extends State<CRNoticeScreen> {
                                                       true,
                                                     );
                                                   },
-                                                  child: const Text("Delete"),
+                                                  child: const Text(
+                                                    "Delete",
+                                                    style: TextStyle(
+                                                      color: Colors.red,
+                                                    ),
+                                                  ),
                                                 ),
                                               ],
                                             );
@@ -474,7 +588,6 @@ class _CRNoticeScreenState extends State<CRNoticeScreen> {
                                         return;
                                       }
                                     },
-
                                     itemBuilder: (context) {
                                       final items = <PopupMenuEntry<String>>[];
 
@@ -490,6 +603,7 @@ class _CRNoticeScreenState extends State<CRNoticeScreen> {
                                                         false)
                                                     ? Icons.star
                                                     : Icons.star_border,
+                                                color: primaryBlue,
                                               ),
                                               const SizedBox(width: 10),
                                               Text(
@@ -497,6 +611,9 @@ class _CRNoticeScreenState extends State<CRNoticeScreen> {
                                                         false)
                                                     ? "Unstar"
                                                     : "Star",
+                                                style: const TextStyle(
+                                                  color: headingColor,
+                                                ),
                                               ),
                                             ],
                                           ),
@@ -516,12 +633,16 @@ class _CRNoticeScreenState extends State<CRNoticeScreen> {
                                                   notice.pinned
                                                       ? Icons.push_pin_outlined
                                                       : Icons.push_pin,
+                                                  color: primaryBlue,
                                                 ),
                                                 const SizedBox(width: 10),
                                                 Text(
                                                   notice.pinned
                                                       ? "Unpin"
                                                       : "Pin",
+                                                  style: const TextStyle(
+                                                    color: headingColor,
+                                                  ),
                                                 ),
                                               ],
                                             ),
@@ -533,9 +654,17 @@ class _CRNoticeScreenState extends State<CRNoticeScreen> {
                                             value: "edit",
                                             child: Row(
                                               children: [
-                                                Icon(Icons.edit),
+                                                Icon(
+                                                  Icons.edit,
+                                                  color: primaryBlue,
+                                                ),
                                                 SizedBox(width: 10),
-                                                Text("Edit"),
+                                                Text(
+                                                  "Edit",
+                                                  style: TextStyle(
+                                                    color: headingColor,
+                                                  ),
+                                                ),
                                               ],
                                             ),
                                           ),
@@ -546,9 +675,17 @@ class _CRNoticeScreenState extends State<CRNoticeScreen> {
                                             value: "delete",
                                             child: Row(
                                               children: [
-                                                Icon(Icons.delete_outline),
+                                                Icon(
+                                                  Icons.delete_outline,
+                                                  color: Colors.red,
+                                                ),
                                                 SizedBox(width: 10),
-                                                Text("Delete"),
+                                                Text(
+                                                  "Delete",
+                                                  style: TextStyle(
+                                                    color: Colors.red,
+                                                  ),
+                                                ),
                                               ],
                                             ),
                                           ),
@@ -561,15 +698,20 @@ class _CRNoticeScreenState extends State<CRNoticeScreen> {
                                 ],
                               ),
 
+                              const SizedBox(height: 2),
+
                               // Description
                               Text(
                                 notice.description,
                                 maxLines: 1,
                                 overflow: TextOverflow.ellipsis,
-                                style: const TextStyle(color: Colors.grey),
+                                style: const TextStyle(
+                                  color: mutedColor,
+                                  fontSize: 14,
+                                ),
                               ),
 
-                              const SizedBox(height: 5),
+                              const SizedBox(height: 8),
 
                               // Attachments
                               if (notice.attachmentUrls
@@ -577,15 +719,25 @@ class _CRNoticeScreenState extends State<CRNoticeScreen> {
                                   .isNotEmpty)
                                 ...notice.attachmentUrls.map(
                                   (file) => Padding(
-                                    padding: const EdgeInsets.only(bottom: 4),
+                                    padding: const EdgeInsets.only(
+                                      bottom: 4,
+                                    ),
                                     child: Row(
                                       children: [
-                                        const Icon(Icons.attach_file, size: 18),
+                                        const Icon(
+                                          Icons.attach_file,
+                                          size: 18,
+                                          color: primaryBlue,
+                                        ),
                                         const SizedBox(width: 4),
                                         Expanded(
                                           child: Text(
                                             file,
                                             overflow: TextOverflow.ellipsis,
+                                            style: const TextStyle(
+                                              color: headingColor,
+                                              fontSize: 13,
+                                            ),
                                           ),
                                         ),
                                       ],

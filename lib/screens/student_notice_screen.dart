@@ -13,6 +13,14 @@ class StudentNoticeScreen extends StatefulWidget {
 }
 
 class _StudentNoticeScreenState extends State<StudentNoticeScreen> {
+  static const Color gradientDarkBlue = Color(0xFF1B4980);
+  static const Color gradientBlue = Color(0xFF3272B4);
+  static const Color primaryBlue = Color(0xFF0C447B);
+  static const Color backgroundColor = Color(0xFFF4F7FC);
+  static const Color headingColor = Color(0xFF0F2C59);
+  static const Color mutedColor = Color(0xFF708090);
+  static const Color borderColor = Color(0xFFE1E8F0);
+
   final TextEditingController _searchController = TextEditingController();
 
   String searchQuery = "";
@@ -45,7 +53,8 @@ class _StudentNoticeScreenState extends State<StudentNoticeScreen> {
         TextSpan(
           text: text.substring(start, end),
           style: const TextStyle(
-            backgroundColor: Colors.yellow,
+            backgroundColor: Color(0xFFDCEBFA),
+            color: primaryBlue,
             fontWeight: FontWeight.bold,
           ),
         ),
@@ -101,16 +110,31 @@ class _StudentNoticeScreenState extends State<StudentNoticeScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      backgroundColor: backgroundColor,
       appBar: AppBar(
-        backgroundColor: Theme.of(context).colorScheme.inversePrimary,
-        title: const Text('Notices'),
+        backgroundColor: Colors.white,
+        elevation: 0,
+        surfaceTintColor: Colors.white,
+        title: const Text(
+          'Notices',
+          style: TextStyle(
+            color: headingColor,
+            fontSize: 21,
+            fontWeight: FontWeight.w700,
+          ),
+        ),
+        iconTheme: const IconThemeData(
+          color: headingColor,
+        ),
         actions: [
           // Starred filter
           IconButton(
-            icon: Icon(showStarredOnly ? Icons.star : Icons.star_border),
-            tooltip: showStarredOnly
-                ? "Show All Notices"
-                : "Show Starred Notices",
+            icon: Icon(
+              showStarredOnly ? Icons.star : Icons.star_border,
+              color: showStarredOnly ? primaryBlue : headingColor,
+            ),
+            tooltip:
+                showStarredOnly ? "Show All Notices" : "Show Starred Notices",
             onPressed: () {
               setState(() {
                 showStarredOnly = !showStarredOnly;
@@ -122,10 +146,10 @@ class _StudentNoticeScreenState extends State<StudentNoticeScreen> {
           IconButton(
             icon: Icon(
               showPinnedOnly ? Icons.push_pin : Icons.push_pin_outlined,
+              color: showPinnedOnly ? primaryBlue : headingColor,
             ),
-            tooltip: showPinnedOnly
-                ? "Show All Notices"
-                : "Show Pinned Notices",
+            tooltip:
+                showPinnedOnly ? "Show All Notices" : "Show Pinned Notices",
             onPressed: () {
               setState(() {
                 showPinnedOnly = !showPinnedOnly;
@@ -136,21 +160,24 @@ class _StudentNoticeScreenState extends State<StudentNoticeScreen> {
           const SizedBox(width: 10),
         ],
       ),
-
       body: Column(
         children: [
           // Search bar
           Padding(
             padding: const EdgeInsets.only(
-              left: 10,
-              right: 10,
-              top: 10,
+              left: 12,
+              right: 12,
+              top: 12,
               bottom: 0,
             ),
             child: Card(
-              elevation: 2,
+              elevation: 0,
+              color: Colors.white,
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(30),
+                side: const BorderSide(
+                  color: borderColor,
+                ),
               ),
               child: Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 12),
@@ -160,7 +187,13 @@ class _StudentNoticeScreenState extends State<StudentNoticeScreen> {
                   decoration: const InputDecoration(
                     contentPadding: EdgeInsets.symmetric(vertical: 16),
                     hintText: "Search notices...",
-                    prefixIcon: Icon(Icons.search),
+                    hintStyle: TextStyle(
+                      color: mutedColor,
+                    ),
+                    prefixIcon: Icon(
+                      Icons.search,
+                      color: primaryBlue,
+                    ),
                     border: InputBorder.none,
                   ),
                   onChanged: (value) {
@@ -190,22 +223,33 @@ class _StudentNoticeScreenState extends State<StudentNoticeScreen> {
               ),
               child: Row(
                 children: [
-                  const Expanded(child: Divider(thickness: 1)),
+                  const Expanded(
+                    child: Divider(
+                      thickness: 1,
+                      color: Color(0xFFD6E0EC),
+                    ),
+                  ),
                   Padding(
                     padding: const EdgeInsets.symmetric(horizontal: 12),
                     child: Text(
                       showPinnedOnly && showStarredOnly
                           ? "Starred & Pinned Notices"
                           : showPinnedOnly
-                          ? "Pinned Notices"
-                          : "Starred Notices",
+                              ? "Pinned Notices"
+                              : "Starred Notices",
                       style: const TextStyle(
-                        fontSize: 20,
-                        fontWeight: FontWeight.bold,
+                        fontSize: 18,
+                        fontWeight: FontWeight.w700,
+                        color: headingColor,
                       ),
                     ),
                   ),
-                  const Expanded(child: Divider(thickness: 1)),
+                  const Expanded(
+                    child: Divider(
+                      thickness: 1,
+                      color: Color(0xFFD6E0EC),
+                    ),
+                  ),
                 ],
               ),
             ),
@@ -216,11 +260,23 @@ class _StudentNoticeScreenState extends State<StudentNoticeScreen> {
               stream: NoticeService.getNotices(),
               builder: (context, snapshot) {
                 if (snapshot.connectionState == ConnectionState.waiting) {
-                  return const Center(child: CircularProgressIndicator());
+                  return const Center(
+                    child: CircularProgressIndicator(
+                      color: primaryBlue,
+                    ),
+                  );
                 }
 
                 if (!snapshot.hasData || snapshot.data!.isEmpty) {
-                  return const Center(child: Text("No notices found"));
+                  return const Center(
+                    child: Text(
+                      "No notices found",
+                      style: TextStyle(
+                        color: mutedColor,
+                        fontSize: 15,
+                      ),
+                    ),
+                  );
                 }
 
                 final notices = snapshot.data!
@@ -231,24 +287,41 @@ class _StudentNoticeScreenState extends State<StudentNoticeScreen> {
                               starredStatus[notice.id] == true) &&
                           (notice.title.toLowerCase().contains(searchQuery) ||
                               notice.description.toLowerCase().contains(
-                                searchQuery,
-                              )),
+                                    searchQuery,
+                                  )),
                     )
                     .toList();
 
                 if (notices.isEmpty) {
-                  return const Center(child: Text("No matching notices found"));
+                  return const Center(
+                    child: Text(
+                      "No matching notices found",
+                      style: TextStyle(
+                        color: mutedColor,
+                        fontSize: 15,
+                      ),
+                    ),
+                  );
                 }
 
                 return ListView.builder(
-                  padding: const EdgeInsets.all(10),
+                  padding: const EdgeInsets.fromLTRB(12, 10, 12, 20),
                   itemCount: notices.length,
                   itemBuilder: (context, index) {
                     final notice = notices[index];
 
                     return Card(
-                      margin: const EdgeInsets.only(bottom: 10),
+                      margin: const EdgeInsets.only(bottom: 12),
+                      elevation: 0,
+                      color: Colors.white,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(16),
+                        side: const BorderSide(
+                          color: borderColor,
+                        ),
+                      ),
                       child: InkWell(
+                        borderRadius: BorderRadius.circular(16),
                         onTap: () {
                           Navigator.push(
                             context,
@@ -259,7 +332,7 @@ class _StudentNoticeScreenState extends State<StudentNoticeScreen> {
                           );
                         },
                         child: Padding(
-                          padding: const EdgeInsets.all(10),
+                          padding: const EdgeInsets.all(13),
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
@@ -267,35 +340,42 @@ class _StudentNoticeScreenState extends State<StudentNoticeScreen> {
                               Row(
                                 children: [
                                   if (notice.pinned) ...[
-                                    const Icon(Icons.push_pin, size: 16),
+                                    const Icon(
+                                      Icons.push_pin,
+                                      size: 16,
+                                      color: primaryBlue,
+                                    ),
                                     const SizedBox(width: 4),
                                   ],
-
                                   Text(
                                     "Notice by: "
                                     "${notice.createdBy ?? 'Unknown'}",
                                     style: const TextStyle(
-                                      color: Colors.grey,
+                                      color: mutedColor,
                                       fontSize: 13,
+                                      fontWeight: FontWeight.w500,
                                     ),
                                   ),
-
                                   const Spacer(),
-
                                   if (starredStatus[notice.id] == true) ...[
-                                    const Icon(Icons.star, size: 16),
+                                    const Icon(
+                                      Icons.star,
+                                      size: 16,
+                                      color: Color(0xFFE5A900),
+                                    ),
                                     const SizedBox(width: 4),
                                   ],
-
                                   Text(
                                     formatDateTime(notice.createdAt),
                                     style: const TextStyle(
-                                      color: Colors.grey,
+                                      color: mutedColor,
                                       fontSize: 12,
                                     ),
                                   ),
                                 ],
                               ),
+
+                              const SizedBox(height: 5),
 
                               // Title + popup menu
                               Row(
@@ -305,8 +385,8 @@ class _StudentNoticeScreenState extends State<StudentNoticeScreen> {
                                       text: TextSpan(
                                         style: const TextStyle(
                                           fontSize: 18,
-                                          fontWeight: FontWeight.bold,
-                                          color: Colors.black,
+                                          fontWeight: FontWeight.w700,
+                                          color: headingColor,
                                         ),
                                         children: [
                                           highlightText(
@@ -321,6 +401,10 @@ class _StudentNoticeScreenState extends State<StudentNoticeScreen> {
                                   // Student can only
                                   // Star / Unstar.
                                   PopupMenuButton<String>(
+                                    icon: const Icon(
+                                      Icons.more_vert,
+                                      color: mutedColor,
+                                    ),
                                     onSelected: (String value) async {
                                       if (value == "star") {
                                         final user =
@@ -368,6 +452,11 @@ class _StudentNoticeScreenState extends State<StudentNoticeScreen> {
                                                       false)
                                                   ? Icons.star
                                                   : Icons.star_border,
+                                              color:
+                                                  (starredStatus[notice.id] ??
+                                                          false)
+                                                      ? const Color(0xFFE5A900)
+                                                      : headingColor,
                                             ),
                                             const SizedBox(width: 10),
                                             Text(
@@ -384,15 +473,20 @@ class _StudentNoticeScreenState extends State<StudentNoticeScreen> {
                                 ],
                               ),
 
+                              const SizedBox(height: 2),
+
                               // Description
                               Text(
                                 notice.description,
                                 maxLines: 1,
                                 overflow: TextOverflow.ellipsis,
-                                style: const TextStyle(color: Colors.grey),
+                                style: const TextStyle(
+                                  color: mutedColor,
+                                  fontSize: 14,
+                                ),
                               ),
 
-                              const SizedBox(height: 5),
+                              const SizedBox(height: 8),
 
                               // Attachments
                               if (notice.attachmentUrls
@@ -400,15 +494,25 @@ class _StudentNoticeScreenState extends State<StudentNoticeScreen> {
                                   .isNotEmpty)
                                 ...notice.attachmentUrls.map(
                                   (file) => Padding(
-                                    padding: const EdgeInsets.only(bottom: 4),
+                                    padding: const EdgeInsets.only(
+                                      bottom: 4,
+                                    ),
                                     child: Row(
                                       children: [
-                                        const Icon(Icons.attach_file, size: 18),
+                                        const Icon(
+                                          Icons.attach_file,
+                                          size: 18,
+                                          color: primaryBlue,
+                                        ),
                                         const SizedBox(width: 4),
                                         Expanded(
                                           child: Text(
                                             file,
                                             overflow: TextOverflow.ellipsis,
+                                            style: const TextStyle(
+                                              color: headingColor,
+                                              fontSize: 13,
+                                            ),
                                           ),
                                         ),
                                       ],

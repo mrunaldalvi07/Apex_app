@@ -9,13 +9,33 @@ import 'create_notice_screen.dart';
 class NoticeDetailsScreen extends StatefulWidget {
   final Notice notice;
 
-  const NoticeDetailsScreen({super.key, required this.notice});
+  // Current filter states from the previous Notice screen.
+  final bool showStarredOnly;
+  final bool showPinnedOnly;
+
+  const NoticeDetailsScreen({
+    super.key,
+    required this.notice,
+    this.showStarredOnly = false,
+    this.showPinnedOnly = false,
+  });
 
   @override
   State<NoticeDetailsScreen> createState() => _NoticeDetailsScreenState();
 }
 
 class _NoticeDetailsScreenState extends State<NoticeDetailsScreen> {
+  static const Color gradientDarkBlue = Color(0xFF1B4980);
+  static const Color gradientBlue = Color(0xFF3272B4);
+  static const Color primaryBlue = Color(0xFF0C447B);
+  static const Color backgroundColor = Color(0xFFF4F7FC);
+  static const Color headingColor = Color(0xFF0F2C59);
+  static const Color mutedColor = Color(0xFF708090);
+  static const Color borderColor = Color(0xFFE1E8F0);
+
+  // Very light blue popup background.
+  static const Color popupBackground = Color(0xFFF4F8FD);
+
   late Notice notice;
 
   String? currentUserRole;
@@ -166,7 +186,10 @@ class _NoticeDetailsScreenState extends State<NoticeDetailsScreen> {
     });
 
     try {
-      await NoticeService.toggleStarNotice(notice.id!, user.uid);
+      await NoticeService.toggleStarNotice(
+        notice.id!,
+        user.uid,
+      );
     } catch (e) {
       if (!mounted) return;
 
@@ -174,9 +197,11 @@ class _NoticeDetailsScreenState extends State<NoticeDetailsScreen> {
         isStarred = oldStatus;
       });
 
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(const SnackBar(content: Text("Unable to update star")));
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text("Unable to update star"),
+        ),
+      );
     }
   }
 
@@ -192,7 +217,10 @@ class _NoticeDetailsScreenState extends State<NoticeDetailsScreen> {
     final newPinnedStatus = !notice.pinned;
 
     try {
-      await NoticeService.togglePinNotice(notice.id!, newPinnedStatus);
+      await NoticeService.togglePinNotice(
+        notice.id!,
+        newPinnedStatus,
+      );
 
       if (!mounted) return;
 
@@ -213,9 +241,11 @@ class _NoticeDetailsScreenState extends State<NoticeDetailsScreen> {
     } catch (e) {
       if (!mounted) return;
 
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(const SnackBar(content: Text("Unable to update pin")));
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text("Unable to update pin"),
+        ),
+      );
     }
   }
 
@@ -232,20 +262,44 @@ class _NoticeDetailsScreenState extends State<NoticeDetailsScreen> {
       context: context,
       builder: (context) {
         return AlertDialog(
-          title: const Text("Delete Notice"),
-          content: const Text("Are you sure you want to delete this notice?"),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(16),
+          ),
+          title: const Text(
+            "Delete Notice",
+            style: TextStyle(
+              color: headingColor,
+              fontWeight: FontWeight.w700,
+            ),
+          ),
+          content: const Text(
+            "Are you sure you want to delete this notice?",
+            style: TextStyle(
+              color: mutedColor,
+            ),
+          ),
           actions: [
             TextButton(
               onPressed: () {
                 Navigator.pop(context, false);
               },
-              child: const Text("Cancel"),
+              child: const Text(
+                "Cancel",
+                style: TextStyle(
+                  color: primaryBlue,
+                ),
+              ),
             ),
             TextButton(
               onPressed: () {
                 Navigator.pop(context, true);
               },
-              child: const Text("Delete"),
+              child: const Text(
+                "Delete",
+                style: TextStyle(
+                  color: Colors.red,
+                ),
+              ),
             ),
           ],
         );
@@ -265,9 +319,11 @@ class _NoticeDetailsScreenState extends State<NoticeDetailsScreen> {
     } catch (e) {
       if (!mounted) return;
 
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(const SnackBar(content: Text("Unable to delete notice")));
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text("Unable to delete notice"),
+        ),
+      );
     }
   }
 
@@ -313,9 +369,17 @@ class _NoticeDetailsScreenState extends State<NoticeDetailsScreen> {
         value: "star",
         child: Row(
           children: [
-            Icon(isStarred ? Icons.star : Icons.star_border),
+            Icon(
+              isStarred ? Icons.star : Icons.star_border,
+              color: isStarred ? primaryBlue : headingColor,
+            ),
             const SizedBox(width: 10),
-            Text(isStarred ? "Unstar" : "Star"),
+            Text(
+              isStarred ? "Unstar" : "Star",
+              style: const TextStyle(
+                color: headingColor,
+              ),
+            ),
           ],
         ),
       ),
@@ -328,9 +392,17 @@ class _NoticeDetailsScreenState extends State<NoticeDetailsScreen> {
           value: "pin",
           child: Row(
             children: [
-              Icon(notice.pinned ? Icons.push_pin_outlined : Icons.push_pin),
+              Icon(
+                notice.pinned ? Icons.push_pin_outlined : Icons.push_pin,
+                color: primaryBlue,
+              ),
               const SizedBox(width: 10),
-              Text(notice.pinned ? "Unpin" : "Pin"),
+              Text(
+                notice.pinned ? "Unpin" : "Pin",
+                style: const TextStyle(
+                  color: headingColor,
+                ),
+              ),
             ],
           ),
         ),
@@ -340,7 +412,19 @@ class _NoticeDetailsScreenState extends State<NoticeDetailsScreen> {
         const PopupMenuItem<String>(
           value: "edit",
           child: Row(
-            children: [Icon(Icons.edit), SizedBox(width: 10), Text("Edit")],
+            children: [
+              Icon(
+                Icons.edit_outlined,
+                color: primaryBlue,
+              ),
+              SizedBox(width: 10),
+              Text(
+                "Edit",
+                style: TextStyle(
+                  color: headingColor,
+                ),
+              ),
+            ],
           ),
         ),
       );
@@ -350,9 +434,17 @@ class _NoticeDetailsScreenState extends State<NoticeDetailsScreen> {
           value: "delete",
           child: Row(
             children: [
-              Icon(Icons.delete_outline),
+              Icon(
+                Icons.delete_outline,
+                color: Colors.red,
+              ),
               SizedBox(width: 10),
-              Text("Delete"),
+              Text(
+                "Delete",
+                style: TextStyle(
+                  color: headingColor,
+                ),
+              ),
             ],
           ),
         ),
@@ -370,25 +462,56 @@ class _NoticeDetailsScreenState extends State<NoticeDetailsScreen> {
   Widget build(BuildContext context) {
     if (isLoading) {
       return Scaffold(
+        backgroundColor: backgroundColor,
         appBar: AppBar(
-          title: const Text("Notices"),
-          backgroundColor: Theme.of(context).colorScheme.inversePrimary,
+          title: const Text(
+            "Notices",
+            style: TextStyle(
+              color: headingColor,
+              fontWeight: FontWeight.w700,
+            ),
+          ),
+          backgroundColor: Colors.white,
+          elevation: 0,
+          surfaceTintColor: Colors.white,
+          iconTheme: const IconThemeData(
+            color: headingColor,
+          ),
         ),
-        body: const Center(child: CircularProgressIndicator()),
+        body: const Center(
+          child: CircularProgressIndicator(
+            color: primaryBlue,
+          ),
+        ),
       );
     }
 
     return Scaffold(
+      backgroundColor: backgroundColor,
       appBar: AppBar(
-        title: const Text("Notices"),
-        backgroundColor: Theme.of(context).colorScheme.inversePrimary,
-
+        title: const Text(
+          "Notices",
+          style: TextStyle(
+            color: headingColor,
+            fontSize: 21,
+            fontWeight: FontWeight.w700,
+          ),
+        ),
+        backgroundColor: Colors.white,
+        elevation: 0,
+        surfaceTintColor: Colors.white,
+        iconTheme: const IconThemeData(
+          color: headingColor,
+        ),
         actions: [
           // ======================================================
           // ⭐ STARRED NOTICES
           // ======================================================
           IconButton(
-            icon: const Icon(Icons.star),
+            icon: Icon(
+              widget.showStarredOnly ? Icons.star : Icons.star_border,
+              color: primaryBlue,
+            ),
             tooltip: "Starred Notices",
             onPressed: () {
               Navigator.pop(context, "starred");
@@ -399,7 +522,10 @@ class _NoticeDetailsScreenState extends State<NoticeDetailsScreen> {
           // 📌 PINNED NOTICES
           // ======================================================
           IconButton(
-            icon: const Icon(Icons.push_pin),
+            icon: Icon(
+              widget.showPinnedOnly ? Icons.push_pin : Icons.push_pin_outlined,
+              color: primaryBlue,
+            ),
             tooltip: "Pinned Notices",
             onPressed: () {
               Navigator.pop(context, "pinned");
@@ -411,7 +537,10 @@ class _NoticeDetailsScreenState extends State<NoticeDetailsScreen> {
           // ======================================================
           if (canCreate)
             IconButton(
-              icon: const Icon(Icons.add),
+              icon: const Icon(
+                Icons.add,
+                color: primaryBlue,
+              ),
               tooltip: "Create Notice",
               onPressed: () {
                 Navigator.push(
@@ -427,6 +556,12 @@ class _NoticeDetailsScreenState extends State<NoticeDetailsScreen> {
           // ⋮ CURRENT NOTICE ACTIONS
           // ======================================================
           PopupMenuButton<String>(
+            icon: const Icon(
+              Icons.more_vert,
+              color: mutedColor,
+            ),
+            color: popupBackground,
+            surfaceTintColor: popupBackground,
             onSelected: (value) async {
               if (value == "star") {
                 await toggleStar();
@@ -456,6 +591,14 @@ class _NoticeDetailsScreenState extends State<NoticeDetailsScreen> {
             // NOTICE CONTENT CARD
             // ====================================================
             Card(
+              elevation: 0,
+              color: Colors.white,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(16),
+                side: const BorderSide(
+                  color: borderColor,
+                ),
+              ),
               child: Padding(
                 padding: const EdgeInsets.all(16),
                 child: Column(
@@ -472,19 +615,26 @@ class _NoticeDetailsScreenState extends State<NoticeDetailsScreen> {
                             notice.title,
                             style: const TextStyle(
                               fontSize: 24,
-                              fontWeight: FontWeight.bold,
+                              fontWeight: FontWeight.w700,
+                              color: headingColor,
                             ),
                           ),
                         ),
-
                         if (notice.pinned) ...[
                           const SizedBox(width: 8),
-                          const Icon(Icons.push_pin, size: 18),
+                          const Icon(
+                            Icons.push_pin,
+                            size: 18,
+                            color: primaryBlue,
+                          ),
                         ],
-
                         if (isStarred) ...[
                           const SizedBox(width: 8),
-                          const Icon(Icons.star, size: 18),
+                          const Icon(
+                            Icons.star,
+                            size: 18,
+                            color: primaryBlue,
+                          ),
                         ],
                       ],
                     ),
@@ -501,16 +651,15 @@ class _NoticeDetailsScreenState extends State<NoticeDetailsScreen> {
                             "Notice by: "
                             "${notice.createdBy ?? "Unknown"}",
                             style: const TextStyle(
-                              color: Colors.grey,
+                              color: mutedColor,
                               fontSize: 13,
                             ),
                           ),
                         ),
-
                         Text(
                           formatDateTime(notice.createdAt),
                           style: const TextStyle(
-                            color: Colors.grey,
+                            color: mutedColor,
                             fontSize: 12,
                           ),
                         ),
@@ -519,7 +668,10 @@ class _NoticeDetailsScreenState extends State<NoticeDetailsScreen> {
 
                     const SizedBox(height: 10),
 
-                    const Divider(thickness: 0),
+                    const Divider(
+                      color: borderColor,
+                      thickness: 1,
+                    ),
 
                     const SizedBox(height: 10),
 
@@ -528,54 +680,113 @@ class _NoticeDetailsScreenState extends State<NoticeDetailsScreen> {
                     // ------------------------------------------------
                     Text(
                       notice.description,
-                      style: const TextStyle(fontSize: 16),
+                      style: const TextStyle(
+                        fontSize: 16,
+                        height: 1.5,
+                        color: headingColor,
+                      ),
                     ),
 
                     // ------------------------------------------------
                     // ATTACHMENTS
                     // ------------------------------------------------
                     if (notice.attachmentUrls
-                        .where((file) => file.trim().isNotEmpty)
+                        .where(
+                          (file) => file.trim().isNotEmpty,
+                        )
                         .isNotEmpty) ...[
-                      const SizedBox(height: 10),
-
-                      const Divider(thickness: 0),
-
-                      const SizedBox(height: 10),
-
+                      const SizedBox(height: 16),
+                      const Divider(
+                        color: borderColor,
+                        thickness: 1,
+                      ),
+                      const SizedBox(height: 12),
                       const Text(
                         "Attachments",
                         style: TextStyle(
                           fontSize: 16,
-                          fontWeight: FontWeight.bold,
+                          fontWeight: FontWeight.w700,
+                          color: headingColor,
                         ),
                       ),
-
+                      const SizedBox(height: 6),
                       ...notice.attachmentUrls.map(
                         (file) => ListTile(
                           contentPadding: EdgeInsets.zero,
-
-                          leading: const Icon(Icons.attach_file),
-
-                          title: Text(file),
-
+                          leading: const Icon(
+                            Icons.attach_file,
+                            color: primaryBlue,
+                          ),
+                          title: Text(
+                            file,
+                            style: const TextStyle(
+                              color: headingColor,
+                            ),
+                          ),
                           onTap: () {
                             // Open attachment later.
                           },
-
                           trailing: PopupMenuButton<String>(
+                            icon: const Icon(
+                              Icons.more_vert,
+                              color: mutedColor,
+                            ),
+                            color: popupBackground,
+                            surfaceTintColor: popupBackground,
                             itemBuilder: (context) => const [
                               PopupMenuItem<String>(
                                 value: "open",
-                                child: Text("Open"),
+                                child: Row(
+                                  children: [
+                                    Icon(
+                                      Icons.open_in_new,
+                                      color: primaryBlue,
+                                    ),
+                                    SizedBox(width: 10),
+                                    Text(
+                                      "Open",
+                                      style: TextStyle(
+                                        color: headingColor,
+                                      ),
+                                    ),
+                                  ],
+                                ),
                               ),
                               PopupMenuItem<String>(
                                 value: "download",
-                                child: Text("Download"),
+                                child: Row(
+                                  children: [
+                                    Icon(
+                                      Icons.download_outlined,
+                                      color: primaryBlue,
+                                    ),
+                                    SizedBox(width: 10),
+                                    Text(
+                                      "Download",
+                                      style: TextStyle(
+                                        color: headingColor,
+                                      ),
+                                    ),
+                                  ],
+                                ),
                               ),
                               PopupMenuItem<String>(
                                 value: "share",
-                                child: Text("Share"),
+                                child: Row(
+                                  children: [
+                                    Icon(
+                                      Icons.share_outlined,
+                                      color: primaryBlue,
+                                    ),
+                                    SizedBox(width: 10),
+                                    Text(
+                                      "Share",
+                                      style: TextStyle(
+                                        color: headingColor,
+                                      ),
+                                    ),
+                                  ],
+                                ),
                               ),
                             ],
                           ),
@@ -587,12 +798,20 @@ class _NoticeDetailsScreenState extends State<NoticeDetailsScreen> {
               ),
             ),
 
-            const SizedBox(height: 5),
+            const SizedBox(height: 12),
 
             // ====================================================
             // NOTICE INFO CARD
             // ====================================================
             Card(
+              elevation: 0,
+              color: Colors.white,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(16),
+                side: const BorderSide(
+                  color: borderColor,
+                ),
+              ),
               child: Padding(
                 padding: const EdgeInsets.all(16),
                 child: Column(
@@ -600,49 +819,58 @@ class _NoticeDetailsScreenState extends State<NoticeDetailsScreen> {
                   children: [
                     const Row(
                       children: [
-                        Icon(Icons.info_outline),
+                        Icon(
+                          Icons.info_outline,
+                          color: primaryBlue,
+                        ),
                         SizedBox(width: 8),
                         Text(
                           "Notice Info",
                           style: TextStyle(
                             fontSize: 16,
-                            fontWeight: FontWeight.bold,
+                            fontWeight: FontWeight.w700,
+                            color: headingColor,
                           ),
                         ),
                       ],
                     ),
-
-                    const SizedBox(height: 5),
-
-                    const Divider(thickness: 0),
-
-                    const SizedBox(height: 5),
-
+                    const SizedBox(height: 8),
+                    const Divider(
+                      color: borderColor,
+                      thickness: 1,
+                    ),
+                    const SizedBox(height: 8),
                     Text(
                       "Created By: "
                       "${notice.createdBy ?? "Unknown"}",
+                      style: const TextStyle(
+                        color: headingColor,
+                      ),
                     ),
-
                     const SizedBox(height: 10),
-
                     Text(
                       "Created At: "
                       "${formatDateTime(notice.createdAt)}",
+                      style: const TextStyle(
+                        color: headingColor,
+                      ),
                     ),
-
                     const SizedBox(height: 10),
-
                     Text(
                       "Last Updated: "
                       "${formatDateTime(notice.lastUpdated)}",
+                      style: const TextStyle(
+                        color: headingColor,
+                      ),
                     ),
-
                     const SizedBox(height: 10),
-
                     Text(
                       "Status: "
                       "${notice.pinned ? "Pinned" : "Not Pinned"}"
                       "${isStarred ? " • Starred" : ""}",
+                      style: const TextStyle(
+                        color: headingColor,
+                      ),
                     ),
                   ],
                 ),
