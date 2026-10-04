@@ -8,14 +8,11 @@ class AttendanceExportScreen extends StatefulWidget {
   });
 
   @override
-  State<AttendanceExportScreen> createState() =>
-      _AttendanceExportScreenState();
+  State<AttendanceExportScreen> createState() => _AttendanceExportScreenState();
 }
 
-class _AttendanceExportScreenState
-    extends State<AttendanceExportScreen> {
-  final AttendanceExportService _exportService =
-      AttendanceExportService();
+class _AttendanceExportScreenState extends State<AttendanceExportScreen> {
+  final AttendanceExportService _exportService = AttendanceExportService();
 
   // ============================================================
   // COLOUR SCHEME
@@ -26,7 +23,6 @@ class _AttendanceExportScreenState
   static const Color primaryBlue = Color(0xFF0B6EAA);
   static const Color cyan = Color(0xFF18A8C8);
   static const Color successGreen = Color(0xFF159957);
-  static const Color warningOrange = Color(0xFFF39A23);
 
   // ============================================================
   // DATA
@@ -202,8 +198,7 @@ class _AttendanceExportScreenState
       ..showSnackBar(
         SnackBar(
           content: Text(message),
-          backgroundColor:
-              error ? Colors.red.shade700 : successGreen,
+          backgroundColor: error ? Colors.red.shade700 : successGreen,
           behavior: SnackBarBehavior.floating,
         ),
       );
@@ -282,8 +277,7 @@ class _AttendanceExportScreenState
         style: ElevatedButton.styleFrom(
           backgroundColor: color,
           foregroundColor: Colors.white,
-          disabledBackgroundColor:
-              color.withValues(alpha: 0.55),
+          disabledBackgroundColor: color.withValues(alpha: 0.55),
           elevation: 0,
           padding: const EdgeInsets.symmetric(
             horizontal: 18,
@@ -312,8 +306,7 @@ class _AttendanceExportScreenState
             const SizedBox(width: 15),
             Expanded(
               child: Column(
-                crossAxisAlignment:
-                    CrossAxisAlignment.start,
+                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
                     title,
@@ -351,7 +344,6 @@ class _AttendanceExportScreenState
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: const Color(0xFFF4F7FA),
-
       appBar: AppBar(
         backgroundColor: primaryNavy,
         foregroundColor: Colors.white,
@@ -363,13 +355,11 @@ class _AttendanceExportScreenState
           ),
         ),
       ),
-
       body: SafeArea(
         child: SingleChildScrollView(
           padding: const EdgeInsets.all(18),
           child: Column(
-            crossAxisAlignment:
-                CrossAxisAlignment.start,
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               // ==================================================
               // HEADER
@@ -386,8 +376,7 @@ class _AttendanceExportScreenState
                       primaryBlue,
                     ],
                   ),
-                  borderRadius:
-                      BorderRadius.circular(20),
+                  borderRadius: BorderRadius.circular(20),
                 ),
                 child: const Row(
                   children: [
@@ -399,8 +388,7 @@ class _AttendanceExportScreenState
                     SizedBox(width: 15),
                     Expanded(
                       child: Column(
-                        crossAxisAlignment:
-                            CrossAxisAlignment.start,
+                        crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Text(
                             'Attendance Export',
@@ -436,8 +424,7 @@ class _AttendanceExportScreenState
                 padding: const EdgeInsets.all(18),
                 decoration: BoxDecoration(
                   color: Colors.white,
-                  borderRadius:
-                      BorderRadius.circular(18),
+                  borderRadius: BorderRadius.circular(18),
                   boxShadow: [
                     BoxShadow(
                       color: Colors.black.withValues(
@@ -449,8 +436,7 @@ class _AttendanceExportScreenState
                   ],
                 ),
                 child: Column(
-                  crossAxisAlignment:
-                      CrossAxisAlignment.start,
+                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     const Text(
                       'Select Report',
@@ -460,13 +446,10 @@ class _AttendanceExportScreenState
                         color: darkNavy,
                       ),
                     ),
-
                     const SizedBox(height: 16),
-
                     _dropdown(
                       label: 'Branch',
-                      icon:
-                          Icons.account_tree_outlined,
+                      icon: Icons.account_tree_outlined,
                       value: selectedBranch,
                       items: branches,
                       onChanged: (value) {
@@ -475,9 +458,7 @@ class _AttendanceExportScreenState
                         });
                       },
                     ),
-
                     const SizedBox(height: 14),
-
                     _dropdown(
                       label: 'Year',
                       icon: Icons.school_outlined,
@@ -489,13 +470,10 @@ class _AttendanceExportScreenState
                         });
                       },
                     ),
-
                     const SizedBox(height: 14),
-
                     _dropdown(
                       label: 'Course',
-                      icon:
-                          Icons.menu_book_outlined,
+                      icon: Icons.menu_book_outlined,
                       value: selectedCourse,
                       items: courses,
                       onChanged: (value) {
@@ -504,13 +482,10 @@ class _AttendanceExportScreenState
                         });
                       },
                     ),
-
                     const SizedBox(height: 14),
-
                     _dropdown(
                       label: 'Month',
-                      icon:
-                          Icons.calendar_month_outlined,
+                      icon: Icons.calendar_month_outlined,
                       value: selectedMonth,
                       items: months,
                       onChanged: (value) {
@@ -534,8 +509,7 @@ class _AttendanceExportScreenState
                 padding: const EdgeInsets.all(18),
                 decoration: BoxDecoration(
                   color: Colors.white,
-                  borderRadius:
-                      BorderRadius.circular(18),
+                  borderRadius: BorderRadius.circular(18),
                   border: Border.all(
                     color: primaryBlue.withValues(
                       alpha: 0.15,
@@ -543,8 +517,7 @@ class _AttendanceExportScreenState
                   ),
                 ),
                 child: Column(
-                  crossAxisAlignment:
-                      CrossAxisAlignment.start,
+                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     const Text(
                       'Selected Report',
@@ -554,24 +527,19 @@ class _AttendanceExportScreenState
                         color: darkNavy,
                       ),
                     ),
-
                     const SizedBox(height: 12),
-
                     _infoRow(
                       'Branch',
                       selectedBranch ?? '-',
                     ),
-
                     _infoRow(
                       'Year',
                       selectedYear ?? '-',
                     ),
-
                     _infoRow(
                       'Course',
                       selectedCourse ?? '-',
                     ),
-
                     _infoRow(
                       'Month',
                       selectedMonth ?? '-',
@@ -601,8 +569,7 @@ class _AttendanceExportScreenState
               _actionCard(
                 icon: Icons.download_outlined,
                 title: 'Generate & Download Sheet',
-                subtitle:
-                    'Create the Excel attendance report and save it',
+                subtitle: 'Create the Excel attendance report and save it',
                 color: primaryBlue,
                 loading: isGenerating,
                 onTap: _generateSheet,
@@ -614,8 +581,7 @@ class _AttendanceExportScreenState
               _actionCard(
                 icon: Icons.share_outlined,
                 title: 'Export Sheet',
-                subtitle:
-                    'Share the generated attendance report',
+                subtitle: 'Share the generated attendance report',
                 color: cyan,
                 loading: isExporting,
                 onTap: _exportSheet,
@@ -634,12 +600,10 @@ class _AttendanceExportScreenState
                   color: successGreen.withValues(
                     alpha: 0.07,
                   ),
-                  borderRadius:
-                      BorderRadius.circular(15),
+                  borderRadius: BorderRadius.circular(15),
                 ),
                 child: const Row(
-                  crossAxisAlignment:
-                      CrossAxisAlignment.start,
+                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Icon(
                       Icons.check_circle_outline,

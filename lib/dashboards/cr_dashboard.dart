@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 
-import '../auth/login_screen.dart';
 import '../screens/complaint_list_screen.dart';
 import '../screens/attendance_management_screen.dart';
 import '../screens/classroom_management_screen.dart';
@@ -12,12 +11,7 @@ class CrDashboard extends StatelessWidget {
 
   Future<void> logout(BuildContext context) async {
     await FirebaseAuth.instance.signOut();
-
-    Navigator.pushAndRemoveUntil(
-      context,
-      MaterialPageRoute(builder: (_) => const LoginScreen()),
-      (route) => false,
-    );
+    // AuthWrapper reacts to sign-out and displays LoginScreen.
   }
 
   Widget dashboardCard(
@@ -76,24 +70,6 @@ class CrDashboard extends StatelessWidget {
           children: [
             dashboardCard(
               context,
-              Icons.report_problem,
-              "Complaint\nManagement",
-              Colors.red,
-              () {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    builder: (_) => const ComplaintListScreen(
-                      showOnlyMyComplaints: false,
-                      isFaculty: true,
-                    ),
-                  ),
-                );
-              },
-            ),
-
-            dashboardCard(
-              context,
               Icons.fact_check,
               "Attendance\nIndicator",
               Colors.green,
@@ -106,7 +82,35 @@ class CrDashboard extends StatelessWidget {
                 );
               },
             ),
-
+            dashboardCard(
+              context,
+              Icons.campaign,
+              "Notice\nManagement",
+              Colors.blue,
+              () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (_) => const CRNoticeScreen()),
+                );
+              },
+            ),
+            dashboardCard(
+              context,
+              Icons.report_problem,
+              "Complaint\nManagement",
+              const Color.fromARGB(255, 134, 99, 182),
+              () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (_) => const ComplaintListScreen(
+                      showOnlyMyComplaints: false,
+                      isFaculty: false,
+                    ),
+                  ),
+                );
+              },
+            ),
             dashboardCard(
               context,
               Icons.meeting_room,
@@ -118,19 +122,6 @@ class CrDashboard extends StatelessWidget {
                   MaterialPageRoute(
                     builder: (_) => const ClassroomManagementScreen(),
                   ),
-                );
-              },
-            ),
-
-            dashboardCard(
-              context,
-              Icons.campaign,
-              "Notice\nManagement",
-              Colors.blue,
-              () {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(builder: (_) => const CRNoticeScreen()),
                 );
               },
             ),

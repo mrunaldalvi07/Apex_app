@@ -24,20 +24,24 @@ class Complaint {
   });
 
   factory Complaint.fromMap(Map<String, dynamic> map) {
-  return Complaint(
-    complaintId: map['complaintId'] ?? '',
-    title: map['title'] ?? '',
-    description: map['description'] ?? '',
-    category: map['category'] ?? '',
-    complaintType: map['complaintType'] ?? '',
-    status: map['status'] ?? '',
-    createdAt: map['createdAt'] is Timestamp
-        ? (map['createdAt'] as Timestamp).toDate()
-        : DateTime.parse(map['createdAt'].toString()),
-    userId: map['userId'] ?? '',
-    facultyRemark: map['facultyRemark'] ?? '',
-  );
-}
+    final rawCreatedAt = map['createdAt'];
+    final createdAt = rawCreatedAt is Timestamp
+        ? rawCreatedAt.toDate()
+        : DateTime.tryParse(rawCreatedAt?.toString() ?? '') ??
+            DateTime.fromMillisecondsSinceEpoch(0);
+
+    return Complaint(
+      complaintId: map['complaintId'] ?? '',
+      title: map['title'] ?? '',
+      description: map['description'] ?? '',
+      category: map['category'] ?? '',
+      complaintType: map['complaintType'] ?? '',
+      status: map['status'] ?? '',
+      createdAt: createdAt,
+      userId: map['userId'] ?? '',
+      facultyRemark: map['facultyRemark'] ?? '',
+    );
+  }
 
   Map<String, dynamic> toMap() {
     return {

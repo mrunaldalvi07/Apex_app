@@ -446,7 +446,7 @@ class _AdminNoticeScreenState extends State<AdminNoticeScreen> {
                                             user.uid,
                                           );
 
-                                          if (!mounted) return;
+                                          if (!context.mounted) return;
 
                                           setState(() {
                                             starredStatus[notice.id!] =
@@ -454,7 +454,7 @@ class _AdminNoticeScreenState extends State<AdminNoticeScreen> {
                                                     false);
                                           });
                                         } catch (e) {
-                                          if (!mounted) return;
+                                          if (!context.mounted) return;
 
                                           ScaffoldMessenger.of(
                                             context,
@@ -478,7 +478,7 @@ class _AdminNoticeScreenState extends State<AdminNoticeScreen> {
                                             !notice.pinned,
                                           );
                                         } catch (e) {
-                                          if (!mounted) return;
+                                          if (!context.mounted) return;
 
                                           ScaffoldMessenger.of(
                                             context,

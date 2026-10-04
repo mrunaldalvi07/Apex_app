@@ -47,7 +47,10 @@ class _CreateNoticeScreenState extends State<CreateNoticeScreen> {
   }
 
   Future<void> pickFiles() async {
-    FilePickerResult? result = await FilePicker.pickFiles(allowMultiple: true);
+    FilePickerResult? result = await FilePicker.pickFiles(
+      allowMultiple: true,
+      withData: true,
+    );
 
     if (result != null) {
       print(result.files.length);
@@ -418,43 +421,10 @@ class _CreateNoticeScreenState extends State<CreateNoticeScreen> {
                               if (widget.notice == null) {
                                 // CREATE MODE
 
-                                // 1. Create notice and get document ID
-                                final noticeId =
-                                    await NoticeService.createNotice(
-                                      noticeData,
-                                    );
-
-                                // 2. Get local file paths
-                                print(
-                                  "Selected files: ${selectedFiles.length}",
+                                await NoticeService.createNotice(
+                                  noticeData,
+                                  selectedFiles,
                                 );
-
-                                for (final file in selectedFiles) {
-                                  print("File name: ${file.name}");
-                                  print("File path: ${file.path}");
-                                }
-
-                                final filePaths = selectedFiles
-                                    .where((file) => file.path != null)
-                                    .map((file) => file.path!)
-                                    .toList();
-
-                                print("File paths to upload: $filePaths");
-
-                                // 3. Upload files to Firebase Storage
-                                if (filePaths.isNotEmpty) {
-                                  final uploadedUrls =
-                                      await NoticeService.uploadNoticeAttachments(
-                                        noticeId,
-                                        filePaths,
-                                      );
-
-                                  // 4. Save uploaded URLs in Firestore
-                                  await NoticeService.updateNoticeAttachments(
-                                    noticeId,
-                                    uploadedUrls,
-                                  );
-                                }
                               } else {
                                 // EDIT MODE
 

@@ -498,7 +498,7 @@ class _StudentLiveAttendanceScreenState
                 ),
                 const SizedBox(height: 4),
                 Text(
-                  '$year Year • $branch',
+                  '$year Year ? $branch',
                   style: const TextStyle(
                     color: Colors.white70,
                     fontSize: 11,
@@ -603,7 +603,7 @@ class _StudentLiveAttendanceScreenState
                     ),
                     const SizedBox(height: 4),
                     Text(
-                      '${data['year'] ?? year} Year • '
+                      '${data['year'] ?? year} Year ? '
                       '${data['branch'] ?? branch}',
                       style: const TextStyle(
                         color:
