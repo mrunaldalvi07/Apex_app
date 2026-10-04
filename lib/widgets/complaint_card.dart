@@ -21,7 +21,7 @@ class ComplaintCard extends StatelessWidget {
         vertical: 6,
       ),
       decoration: BoxDecoration(
-        gradient: ComplaintPalette.cardGradient,
+        color: ComplaintPalette.white,
         borderRadius: BorderRadius.circular(16),
         border: Border.all(color: ComplaintPalette.skyBlue),
       ),

@@ -13,17 +13,12 @@ class StudentComplaintScreen extends StatelessWidget {
       data: ComplaintPalette.theme(context),
       child: Scaffold(
         appBar: AppBar(
-          backgroundColor: Colors.transparent,
-          foregroundColor: ComplaintPalette.white,
-          flexibleSpace: const DecoratedBox(
-            decoration:
-                BoxDecoration(gradient: ComplaintPalette.primaryGradient),
-          ),
+          backgroundColor: ComplaintPalette.white,
+          foregroundColor: ComplaintPalette.darkNavy,
           title: const Text("Complaint Management"),
         ),
-        body: Container(
-          decoration:
-              const BoxDecoration(gradient: ComplaintPalette.pageGradient),
+        body: ColoredBox(
+          color: ComplaintPalette.background,
           child: Padding(
             padding: const EdgeInsets.all(20),
             child: Column(

@@ -5,6 +5,7 @@ import '../screens/complaint_list_screen.dart';
 import '../screens/attendance_management_screen.dart';
 import '../screens/classroom_management_screen.dart';
 import '../screens/cr_notice_screen.dart';
+import '../widgets/dashboard_module_card.dart';
 
 class CrDashboard extends StatelessWidget {
   const CrDashboard({super.key});
@@ -12,40 +13,6 @@ class CrDashboard extends StatelessWidget {
   Future<void> logout(BuildContext context) async {
     await FirebaseAuth.instance.signOut();
     // AuthWrapper reacts to sign-out and displays LoginScreen.
-  }
-
-  Widget dashboardCard(
-    BuildContext context,
-    IconData icon,
-    String title,
-    Color color,
-    VoidCallback onTap,
-  ) {
-    return InkWell(
-      onTap: onTap,
-      borderRadius: BorderRadius.circular(15),
-      child: Card(
-        elevation: 5,
-        child: Container(
-          decoration: BoxDecoration(
-            color: color.withValues(alpha: 0.1),
-            borderRadius: BorderRadius.circular(15),
-          ),
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Icon(icon, size: 55, color: color),
-              const SizedBox(height: 15),
-              Text(
-                title,
-                textAlign: TextAlign.center,
-                style: const TextStyle(fontWeight: FontWeight.bold),
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
   }
 
   @override
@@ -61,19 +28,22 @@ class CrDashboard extends StatelessWidget {
           ),
         ],
       ),
-      body: Padding(
-        padding: const EdgeInsets.all(20),
-        child: GridView.count(
-          crossAxisCount: 2,
-          crossAxisSpacing: 20,
-          mainAxisSpacing: 20,
+      body: LayoutBuilder(
+        builder: (context, constraints) {
+          final isDesktop = constraints.maxWidth >= 900;
+          return GridView(
+            padding: const EdgeInsets.all(20),
+            gridDelegate: SliverGridDelegateWithMaxCrossAxisExtent(
+              maxCrossAxisExtent: isDesktop ? 250 : 320,
+              mainAxisExtent: isDesktop ? 155 : 175,
+              crossAxisSpacing: 16,
+              mainAxisSpacing: 16,
+            ),
           children: [
-            dashboardCard(
-              context,
-              Icons.fact_check,
-              "Attendance\nIndicator",
-              Colors.green,
-              () {
+            DashboardModuleCard(
+              icon: Icons.fact_check,
+              title: 'Attendance\nIndicator',
+              onTap: () {
                 Navigator.push(
                   context,
                   MaterialPageRoute(
@@ -82,24 +52,22 @@ class CrDashboard extends StatelessWidget {
                 );
               },
             ),
-            dashboardCard(
-              context,
-              Icons.campaign,
-              "Notice\nManagement",
-              Colors.blue,
-              () {
+            DashboardModuleCard(
+              icon: Icons.meeting_room,
+              title: 'Classroom\nScheduler',
+              onTap: () {
                 Navigator.push(
                   context,
-                  MaterialPageRoute(builder: (_) => const CRNoticeScreen()),
+                  MaterialPageRoute(
+                    builder: (_) => const ClassroomManagementScreen(),
+                  ),
                 );
               },
             ),
-            dashboardCard(
-              context,
-              Icons.report_problem,
-              "Complaint\nManagement",
-              const Color.fromARGB(255, 134, 99, 182),
-              () {
+            DashboardModuleCard(
+              icon: Icons.report_problem,
+              title: 'Complaint\nManagement',
+              onTap: () {
                 Navigator.push(
                   context,
                   MaterialPageRoute(
@@ -111,22 +79,19 @@ class CrDashboard extends StatelessWidget {
                 );
               },
             ),
-            dashboardCard(
-              context,
-              Icons.meeting_room,
-              "Classroom\nScheduler",
-              Colors.orange,
-              () {
+            DashboardModuleCard(
+              icon: Icons.campaign,
+              title: 'Notice\nManagement',
+              onTap: () {
                 Navigator.push(
                   context,
-                  MaterialPageRoute(
-                    builder: (_) => const ClassroomManagementScreen(),
-                  ),
+                  MaterialPageRoute(builder: (_) => const CRNoticeScreen()),
                 );
               },
             ),
           ],
-        ),
+          );
+        },
       ),
     );
   }

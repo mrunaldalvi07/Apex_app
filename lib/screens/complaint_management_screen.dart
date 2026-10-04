@@ -7,31 +7,18 @@ import '../theme/complaint_theme.dart';
 class ComplaintManagementScreen extends StatelessWidget {
   const ComplaintManagementScreen({super.key});
 
-  static const Color _primaryNavy = Color(0xFF073B6F);
-  static const Color _primaryBlue = Color(0xFF0B6EAA);
-  static const LinearGradient _buttonGradient = LinearGradient(
-    colors: [_primaryNavy, _primaryBlue],
-    begin: Alignment.topLeft,
-    end: Alignment.bottomRight,
-  );
-
   @override
   Widget build(BuildContext context) {
     return Theme(
       data: ComplaintPalette.theme(context),
       child: Scaffold(
         appBar: AppBar(
-          backgroundColor: Colors.transparent,
-          foregroundColor: ComplaintPalette.white,
-          flexibleSpace: const DecoratedBox(
-            decoration:
-                BoxDecoration(gradient: ComplaintPalette.primaryGradient),
-          ),
+          backgroundColor: ComplaintPalette.white,
+          foregroundColor: ComplaintPalette.darkNavy,
           title: const Text("Complaint Management"),
         ),
-        body: Container(
-          decoration:
-              const BoxDecoration(gradient: ComplaintPalette.pageGradient),
+        body: ColoredBox(
+          color: ComplaintPalette.background,
           child: Padding(
             padding: const EdgeInsets.all(20),
             child: Column(
@@ -91,7 +78,7 @@ class ComplaintManagementScreen extends StatelessWidget {
           child: Container(
             padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
             decoration: BoxDecoration(
-              gradient: _buttonGradient,
+              gradient: ComplaintPalette.attendanceActionGradient,
               borderRadius: BorderRadius.circular(17),
               boxShadow: const [
                 BoxShadow(

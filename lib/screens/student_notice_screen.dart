@@ -13,8 +13,6 @@ class StudentNoticeScreen extends StatefulWidget {
 }
 
 class _StudentNoticeScreenState extends State<StudentNoticeScreen> {
-  static const Color gradientDarkBlue = Color(0xFF1B4980);
-  static const Color gradientBlue = Color(0xFF3272B4);
   static const Color primaryBlue = Color(0xFF0C447B);
   static const Color backgroundColor = Color(0xFFF4F7FC);
   static const Color headingColor = Color(0xFF0F2C59);
