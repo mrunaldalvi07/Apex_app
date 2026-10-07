@@ -29,7 +29,7 @@ class _BookingFormScreenState extends State<BookingFormScreen> {
   // APEX Classroom UI Colors
   static const Color darkNavy = Color(0xFF163B73);
   static const Color primaryNavy = Color(0xFF2F6DB2);
-  static const Color background = Color(0xFFF5F0EB);
+  static const Color background = Colors.white;
 
   @override
   void initState() {

@@ -7,7 +7,7 @@ class ReleaseClassroomScreen extends StatelessWidget {
   // Classroom module colors
   static const Color darkNavy = Color(0xFF163B73);
   static const Color primaryNavy = Color(0xFF2F6DB2);
-  static const Color background = Color(0xFFF5F0EB);
+  static const Color background = Colors.white;
 
   @override
   Widget build(BuildContext context) {
@@ -309,11 +309,13 @@ class ReleaseClassroomScreen extends StatelessWidget {
                                   size: 20,
                                 ),
                                 SizedBox(width: 8),
-                                Text(
-                                  "Classroom is currently booked",
-                                  style: TextStyle(
-                                    color: Colors.red,
-                                    fontWeight: FontWeight.w600,
+                                Expanded(
+                                  child: Text(
+                                    "Classroom is currently booked",
+                                    style: TextStyle(
+                                      color: Colors.red,
+                                      fontWeight: FontWeight.w600,
+                                    ),
                                   ),
                                 ),
                               ],
@@ -355,29 +357,38 @@ class ReleaseClassroomScreen extends StatelessWidget {
                                       shape:
                                           RoundedRectangleBorder(
                                         borderRadius:
-                                            BorderRadius.circular(16),
+                                            BorderRadius.circular(
+                                                16),
                                       ),
-                                      title: const Row(
+
+                                      // FIXED DIALOG TITLE
+                                      title: Row(
                                         children: [
-                                          Icon(
+                                          const Icon(
                                             Icons
                                                 .warning_amber_rounded,
                                             color: Colors.red,
+                                            size: 30,
                                           ),
-                                          SizedBox(width: 8),
-                                          Text(
-                                            "Confirm Release",
-                                            style: TextStyle(
-                                              fontWeight:
-                                                  FontWeight.bold,
+                                          const SizedBox(width: 8),
+                                          const Flexible(
+                                            child: Text(
+                                              "Confirm Release",
+                                              style: TextStyle(
+                                                fontWeight:
+                                                    FontWeight.bold,
+                                                fontSize: 22,
+                                              ),
                                             ),
                                           ),
                                         ],
                                       ),
+
                                       content: Text(
                                         "Are you sure?\n\n"
                                         "ROOM $roomNo will be released.",
                                       ),
+
                                       actions: [
                                         TextButton(
                                           onPressed: () {

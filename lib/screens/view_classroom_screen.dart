@@ -24,7 +24,7 @@ class _ClassroomScreenState extends State<ClassroomScreen> {
   // Classroom UI Colors
   static const Color darkNavy = Color(0xFF163B73);
   static const Color primaryNavy = Color(0xFF2F6DB2);
-  static const Color background = Color(0xFFF5F0EB);
+  static const Color background = Colors.white;
 
   @override
   void dispose() {
@@ -51,9 +51,6 @@ class _ClassroomScreenState extends State<ClassroomScreen> {
         foregroundColor: darkNavy,
         elevation: 0,
       ),
-
-      // Allows the body to resize when the keyboard opens.
-      resizeToAvoidBottomInset: true,
 
       body: StreamBuilder<QuerySnapshot>(
         stream: FirebaseFirestore.instance
@@ -125,608 +122,529 @@ class _ClassroomScreenState extends State<ClassroomScreen> {
           }
 
           // --------------------------------------------------
-          // RESPONSIVE LAYOUT
+          // MOBILE / LAPTOP SAFE LAYOUT
           // --------------------------------------------------
 
           return LayoutBuilder(
             builder: (context, constraints) {
-              return Center(
+              return SingleChildScrollView(
+                keyboardDismissBehavior:
+                    ScrollViewKeyboardDismissBehavior.manual,
+
                 child: ConstrainedBox(
-                  constraints: const BoxConstraints(
-                    maxWidth: 1100,
+                  constraints: BoxConstraints(
+                    minHeight: constraints.maxHeight,
                   ),
 
-                  // IMPORTANT:
-                  // The complete classroom screen scrolls.
-                  // This prevents bottom overflow when the
-                  // mobile keyboard is visible.
-                  child: SingleChildScrollView(
-                    keyboardDismissBehavior:
-                        ScrollViewKeyboardDismissBehavior.manual,
+                  child: Column(
+                    children: [
 
-                    padding: const EdgeInsets.only(
-                      bottom: 20,
-                    ),
+                      // --------------------------------------------------
+                      // BLUE GRADIENT HEADER
+                      // --------------------------------------------------
 
-                    child: Column(
-                      children: [
-
-                        // --------------------------------------------------
-                        // BLUE GRADIENT HEADER
-                        // --------------------------------------------------
-
-                        Padding(
-                          padding:
-                              const EdgeInsets.fromLTRB(
-                            12,
-                            12,
-                            12,
-                            6,
-                          ),
-
-                          child: Container(
-                            width: double.infinity,
-                            padding:
-                                const EdgeInsets.all(18),
-
-                            decoration: BoxDecoration(
-                              gradient:
-                                  const LinearGradient(
-                                colors: [
-                                  darkNavy,
-                                  primaryNavy,
-                                ],
-                                begin:
-                                    Alignment.centerLeft,
-                                end:
-                                    Alignment.centerRight,
-                              ),
-
-                              borderRadius:
-                                  BorderRadius.circular(17),
-                            ),
-
-                            child: Column(
-                              crossAxisAlignment:
-                                  CrossAxisAlignment.start,
-
-                              children: [
-                                const Text(
-                                  "Classroom Overview",
-
-                                  style: TextStyle(
-                                    color: Colors.white,
-                                    fontSize: 21,
-                                    fontWeight:
-                                        FontWeight.bold,
-                                  ),
-                                ),
-
-                                const SizedBox(height: 5),
-
-                                Text(
-                                  "$freeCount Free  •  "
-                                  "$temporaryCount Temporary  •  "
-                                  "$bookedCount Booked",
-
-                                  style: TextStyle(
-                                    color: Colors.white
-                                        .withOpacity(0.9),
-                                    fontSize: 14,
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
+                      Padding(
+                        padding: const EdgeInsets.fromLTRB(
+                          12,
+                          12,
+                          12,
+                          6,
                         ),
+                        child: Container(
+                          width: double.infinity,
+                          padding: const EdgeInsets.all(18),
 
-                        // --------------------------------------------------
-                        // STATUS CARDS
-                        // --------------------------------------------------
-
-                        Padding(
-                          padding:
-                              const EdgeInsets.fromLTRB(
-                            12,
-                            6,
-                            12,
-                            6,
+                          decoration: BoxDecoration(
+                            gradient: const LinearGradient(
+                              colors: [
+                                darkNavy,
+                                primaryNavy,
+                              ],
+                              begin: Alignment.centerLeft,
+                              end: Alignment.centerRight,
+                            ),
+                            borderRadius:
+                                BorderRadius.circular(17),
                           ),
 
-                          child: Row(
+                          child: Column(
+                            crossAxisAlignment:
+                                CrossAxisAlignment.start,
+
                             children: [
-                              Expanded(
-                                child: _countCard(
-                                  title: "FREE",
-                                  count: freeCount,
-                                  color: Colors.green,
-                                  icon:
-                                      Icons.check_circle,
+                              const Text(
+                                "Classroom Overview",
+                                style: TextStyle(
+                                  color: Colors.white,
+                                  fontSize: 21,
+                                  fontWeight:
+                                      FontWeight.bold,
                                 ),
                               ),
 
-                              const SizedBox(width: 8),
+                              const SizedBox(height: 5),
 
-                              Expanded(
-                                child: _countCard(
-                                  title: "TEMPORARY",
-                                  count: temporaryCount,
-                                  color: Colors.orange,
-                                  icon:
-                                      Icons.access_time,
-                                ),
-                              ),
-
-                              const SizedBox(width: 8),
-
-                              Expanded(
-                                child: _countCard(
-                                  title: "BOOKED",
-                                  count: bookedCount,
-                                  color: Colors.red,
-                                  icon:
-                                      Icons.event_busy,
+                              Text(
+                                "$freeCount Free  •  "
+                                "$temporaryCount Temporary  •  "
+                                "$bookedCount Booked",
+                                style: TextStyle(
+                                  color: Colors.white
+                                      .withOpacity(0.9),
+                                  fontSize: 14,
                                 ),
                               ),
                             ],
                           ),
                         ),
+                      ),
 
-                        // --------------------------------------------------
-                        // SEARCH
-                        // --------------------------------------------------
+                      // --------------------------------------------------
+                      // STATUS CARDS
+                      // --------------------------------------------------
 
-                        Padding(
-                          padding:
-                              const EdgeInsets.symmetric(
-                            horizontal: 12,
-                            vertical: 6,
+                      Padding(
+                        padding: const EdgeInsets.fromLTRB(
+                          12,
+                          6,
+                          12,
+                          6,
+                        ),
+
+                        child: Row(
+                          children: [
+
+                            Expanded(
+                              child: _countCard(
+                                title: "FREE",
+                                count: freeCount,
+                                color: Colors.green,
+                                icon: Icons.check_circle,
+                              ),
+                            ),
+
+                            const SizedBox(width: 8),
+
+                            Expanded(
+                              child: _countCard(
+                                title: "TEMPORARY",
+                                count: temporaryCount,
+                                color: Colors.orange,
+                                icon: Icons.access_time,
+                              ),
+                            ),
+
+                            const SizedBox(width: 8),
+
+                            Expanded(
+                              child: _countCard(
+                                title: "BOOKED",
+                                count: bookedCount,
+                                color: Colors.red,
+                                icon: Icons.event_busy,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+
+                      // --------------------------------------------------
+                      // SEARCH
+                      // --------------------------------------------------
+
+                      Padding(
+                        padding:
+                            const EdgeInsets.symmetric(
+                          horizontal: 12,
+                          vertical: 6,
+                        ),
+
+                        child: TextField(
+                          controller: _searchController,
+                          focusNode: _searchFocusNode,
+
+                          // IMPORTANT:
+                          // No setState here.
+                          // This prevents the entire StreamBuilder
+                          // from rebuilding while the user types.
+                          onChanged: (value) {
+                            _searchTextNotifier.value =
+                                value;
+                          },
+
+                          decoration: InputDecoration(
+                            hintText:
+                                "Search classroom number",
+
+                            prefixIcon: const Icon(
+                              Icons.search,
+                              color: darkNavy,
+                            ),
+
+                            suffixIcon:
+                                ValueListenableBuilder<String>(
+                              valueListenable:
+                                  _searchTextNotifier,
+
+                              builder:
+                                  (context, searchText, child) {
+                                if (searchText.isEmpty) {
+                                  return const SizedBox.shrink();
+                                }
+
+                                return IconButton(
+                                  icon: const Icon(
+                                    Icons.clear,
+                                    color: darkNavy,
+                                  ),
+
+                                  onPressed: () {
+                                    _searchController.clear();
+
+                                    _searchTextNotifier.value =
+                                        "";
+
+                                    // Keep the search field active.
+                                    _searchFocusNode.requestFocus();
+                                  },
+                                );
+                              },
+                            ),
+
+                            filled: true,
+                            fillColor: Colors.white,
+
+                            border: OutlineInputBorder(
+                              borderRadius:
+                                  BorderRadius.circular(14),
+                              borderSide: BorderSide.none,
+                            ),
+
+                            enabledBorder:
+                                OutlineInputBorder(
+                              borderRadius:
+                                  BorderRadius.circular(14),
+                              borderSide: BorderSide.none,
+                            ),
+
+                            focusedBorder:
+                                OutlineInputBorder(
+                              borderRadius:
+                                  BorderRadius.circular(14),
+                              borderSide:
+                                  const BorderSide(
+                                color: primaryNavy,
+                                width: 2,
+                              ),
+                            ),
                           ),
+                        ),
+                      ),
 
-                          child: TextField(
-                            controller:
-                                _searchController,
+                      // --------------------------------------------------
+                      // FILTER BUTTONS
+                      // --------------------------------------------------
 
-                            focusNode:
-                                _searchFocusNode,
+                      SingleChildScrollView(
+                        scrollDirection: Axis.horizontal,
+                        padding:
+                            const EdgeInsets.symmetric(
+                          horizontal: 12,
+                          vertical: 5,
+                        ),
+
+                        child: Row(
+                          children: [
+
+                            _filterButton("ALL"),
+
+                            const SizedBox(width: 8),
+
+                            _filterButton("FREE"),
+
+                            const SizedBox(width: 8),
+
+                            _filterButton(
+                              "TEMPORARILY RESERVED",
+                            ),
+
+                            const SizedBox(width: 8),
+
+                            _filterButton("BOOKED"),
+                          ],
+                        ),
+                      ),
+
+                      const SizedBox(height: 4),
+
+                      // --------------------------------------------------
+                      // CLASSROOM LIST
+                      // --------------------------------------------------
+
+                      ValueListenableBuilder<String>(
+                        valueListenable:
+                            _searchTextNotifier,
+
+                        builder:
+                            (context, searchText, child) {
+                          final search =
+                              searchText
+                                  .trim()
+                                  .toLowerCase();
+
+                          final filteredClassrooms =
+                              classrooms.where((doc) {
+                            final data =
+                                doc.data()
+                                    as Map<String, dynamic>;
+
+                            final roomNo =
+                                data['roomNo']
+                                        ?.toString()
+                                        .toLowerCase() ??
+                                    "";
+
+                            final status =
+                                data['status']
+                                        ?.toString()
+                                        .toUpperCase() ??
+                                    "";
+
+                            final matchesSearch =
+                                roomNo.contains(search);
+
+                            bool matchesFilter = true;
+
+                            if (_selectedFilter == "FREE") {
+                              matchesFilter =
+                                  status == "FREE";
+                            } else if (_selectedFilter ==
+                                "TEMPORARILY RESERVED") {
+                              matchesFilter =
+                                  status ==
+                                      "TEMPORARILY RESERVED";
+                            } else if (_selectedFilter ==
+                                "BOOKED") {
+                              matchesFilter =
+                                  status == "BOOKED";
+                            }
+
+                            return matchesSearch &&
+                                matchesFilter;
+                          }).toList();
+
+                          if (filteredClassrooms.isEmpty) {
+                            return const Padding(
+                              padding: EdgeInsets.all(30),
+                              child: Center(
+                                child: Text(
+                                  "No classrooms match your search/filter",
+                                  textAlign: TextAlign.center,
+                                  style: TextStyle(
+                                    color: darkNavy,
+                                    fontWeight:
+                                        FontWeight.w500,
+                                  ),
+                                ),
+                              ),
+                            );
+                          }
+
+                          return ListView.builder(
+                            itemCount:
+                                filteredClassrooms.length,
 
                             // IMPORTANT:
-                            // No setState here.
-                            // This keeps the search input stable
-                            // while typing.
-                            onChanged: (value) {
-                              _searchTextNotifier.value =
-                                  value;
-                            },
+                            // The main page now handles scrolling.
+                            // This prevents nested scrolling and
+                            // keyboard overflow on mobile.
+                            shrinkWrap: true,
+                            physics:
+                                const NeverScrollableScrollPhysics(),
 
-                            decoration:
-                                InputDecoration(
-                              hintText:
-                                  "Search classroom number",
-
-                              prefixIcon:
-                                  const Icon(
-                                Icons.search,
-                                color: darkNavy,
-                              ),
-
-                              suffixIcon:
-                                  ValueListenableBuilder<
-                                      String>(
-                                valueListenable:
-                                    _searchTextNotifier,
-
-                                builder: (
-                                  context,
-                                  searchText,
-                                  child,
-                                ) {
-                                  if (searchText.isEmpty) {
-                                    return const SizedBox
-                                        .shrink();
-                                  }
-
-                                  return IconButton(
-                                    icon:
-                                        const Icon(
-                                      Icons.clear,
-                                      color: darkNavy,
-                                    ),
-
-                                    onPressed: () {
-                                      _searchController
-                                          .clear();
-
-                                      _searchTextNotifier
-                                          .value = "";
-
-                                      // Keep search field active.
-                                      _searchFocusNode
-                                          .requestFocus();
-                                    },
-                                  );
-                                },
-                              ),
-
-                              filled: true,
-                              fillColor: Colors.white,
-
-                              border:
-                                  OutlineInputBorder(
-                                borderRadius:
-                                    BorderRadius.circular(
-                                  14,
-                                ),
-                                borderSide:
-                                    BorderSide.none,
-                              ),
-
-                              enabledBorder:
-                                  OutlineInputBorder(
-                                borderRadius:
-                                    BorderRadius.circular(
-                                  14,
-                                ),
-                                borderSide:
-                                    BorderSide.none,
-                              ),
-
-                              focusedBorder:
-                                  OutlineInputBorder(
-                                borderRadius:
-                                    BorderRadius.circular(
-                                  14,
-                                ),
-                                borderSide:
-                                    const BorderSide(
-                                  color: primaryNavy,
-                                  width: 2,
-                                ),
-                              ),
-                            ),
-                          ),
-                        ),
-
-                        // --------------------------------------------------
-                        // FILTER BUTTONS
-                        // --------------------------------------------------
-
-                        SingleChildScrollView(
-                          scrollDirection:
-                              Axis.horizontal,
-
-                          padding:
-                              const EdgeInsets.symmetric(
-                            horizontal: 12,
-                            vertical: 5,
-                          ),
-
-                          child: Row(
-                            children: [
-                              _filterButton("ALL"),
-
-                              const SizedBox(width: 8),
-
-                              _filterButton("FREE"),
-
-                              const SizedBox(width: 8),
-
-                              _filterButton(
-                                "TEMPORARILY RESERVED",
-                              ),
-
-                              const SizedBox(width: 8),
-
-                              _filterButton("BOOKED"),
-                            ],
-                          ),
-                        ),
-
-                        const SizedBox(height: 4),
-
-                        // --------------------------------------------------
-                        // CLASSROOM LIST
-                        // --------------------------------------------------
-
-                        ValueListenableBuilder<String>(
-                          valueListenable:
-                              _searchTextNotifier,
-
-                          builder: (
-                            context,
-                            searchText,
-                            child,
-                          ) {
-                            final search = searchText
-                                .trim()
-                                .toLowerCase();
-
-                            final filteredClassrooms =
-                                classrooms.where((doc) {
-                              final data =
-                                  doc.data()
-                                      as Map<String,
-                                          dynamic>;
+                            itemBuilder:
+                                (context, index) {
+                              final classroom =
+                                  filteredClassrooms[index]
+                                      .data()
+                                      as Map<String, dynamic>;
 
                               final roomNo =
-                                  data['roomNo']
-                                          ?.toString()
-                                          .toLowerCase() ??
-                                      "";
+                                  classroom['roomNo']
+                                          ?.toString() ??
+                                      "N/A";
 
                               final status =
-                                  data['status']
+                                  classroom['status']
                                           ?.toString()
                                           .toUpperCase() ??
+                                      "UNKNOWN";
+
+                              final course =
+                                  classroom['course']
+                                          ?.toString() ??
                                       "";
 
-                              final matchesSearch =
-                                  roomNo.contains(search);
+                              // --------------------------------------------------
+                              // STATUS COLORS
+                              // --------------------------------------------------
 
-                              bool matchesFilter = true;
+                              Color statusColor;
+                              IconData statusIcon;
 
-                              if (_selectedFilter ==
-                                  "FREE") {
-                                matchesFilter =
-                                    status == "FREE";
-                              } else if (_selectedFilter ==
+                              if (status == "FREE") {
+                                statusColor =
+                                    Colors.green;
+                                statusIcon =
+                                    Icons.check_circle;
+                              } else if (status ==
                                   "TEMPORARILY RESERVED") {
-                                matchesFilter =
-                                    status ==
-                                        "TEMPORARILY RESERVED";
-                              } else if (_selectedFilter ==
+                                statusColor =
+                                    Colors.orange;
+                                statusIcon =
+                                    Icons.access_time;
+                              } else if (status ==
                                   "BOOKED") {
-                                matchesFilter =
-                                    status == "BOOKED";
+                                statusColor =
+                                    Colors.red;
+                                statusIcon =
+                                    Icons.event_busy;
+                              } else {
+                                statusColor =
+                                    primaryNavy;
+                                statusIcon =
+                                    Icons.help_outline;
                               }
 
-                              return matchesSearch &&
-                                  matchesFilter;
-                            }).toList();
+                              return Card(
+                                margin:
+                                    const EdgeInsets.symmetric(
+                                  horizontal: 12,
+                                  vertical: 6,
+                                ),
 
-                            if (filteredClassrooms
-                                .isEmpty) {
-                              return const Padding(
-                                padding:
-                                    EdgeInsets.all(30),
+                                elevation: 2,
 
-                                child: Center(
-                                  child: Text(
-                                    "No classrooms match your search/filter",
+                                color: Colors.white,
 
-                                    textAlign:
-                                        TextAlign.center,
+                                shape:
+                                    RoundedRectangleBorder(
+                                  borderRadius:
+                                      BorderRadius.circular(17),
+                                ),
 
-                                    style: TextStyle(
-                                      color: darkNavy,
-                                      fontWeight:
-                                          FontWeight.w500,
-                                    ),
+                                child: Padding(
+                                  padding:
+                                      const EdgeInsets.all(14),
+
+                                  child: Column(
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
+
+                                    children: [
+
+                                      // --------------------------------------------------
+                                      // ROOM HEADER
+                                      // --------------------------------------------------
+
+                                      Container(
+                                        width: double.infinity,
+
+                                        padding:
+                                            const EdgeInsets
+                                                .symmetric(
+                                          vertical: 15,
+                                        ),
+
+                                        decoration:
+                                            BoxDecoration(
+                                          color: statusColor,
+                                          borderRadius:
+                                              BorderRadius
+                                                  .circular(12),
+                                        ),
+
+                                        child: Text(
+                                          "ROOM $roomNo",
+                                          textAlign:
+                                              TextAlign.center,
+
+                                          style:
+                                              const TextStyle(
+                                            color: Colors.white,
+                                            fontSize: 21,
+                                            fontWeight:
+                                                FontWeight.bold,
+                                          ),
+                                        ),
+                                      ),
+
+                                      const SizedBox(
+                                        height: 12,
+                                      ),
+
+                                      if (course.isNotEmpty)
+                                        Text(
+                                          "Course: $course",
+                                          style:
+                                              const TextStyle(
+                                            fontSize: 16,
+                                            color: darkNavy,
+                                            fontWeight:
+                                                FontWeight.w500,
+                                          ),
+                                        ),
+
+                                      if (course.isNotEmpty)
+                                        const SizedBox(
+                                          height: 7,
+                                        ),
+
+                                      // --------------------------------------------------
+                                      // STATUS
+                                      // --------------------------------------------------
+
+                                      Row(
+                                        children: [
+
+                                          Icon(
+                                            statusIcon,
+                                            color:
+                                                statusColor,
+                                            size: 20,
+                                          ),
+
+                                          const SizedBox(
+                                            width: 7,
+                                          ),
+
+                                          Expanded(
+                                            child: Text(
+                                              "Status: $status",
+                                              style:
+                                                  TextStyle(
+                                                fontSize: 15,
+                                                fontWeight:
+                                                    FontWeight
+                                                        .bold,
+                                                color:
+                                                    statusColor,
+                                              ),
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                    ],
                                   ),
                                 ),
                               );
-                            }
+                            },
+                          );
+                        },
+                      ),
 
-                            // IMPORTANT:
-                            // The outer SingleChildScrollView
-                            // handles scrolling.
-                            //
-                            // This ListView only calculates its
-                            // required height and does NOT scroll
-                            // independently.
-                            return ListView.builder(
-                              shrinkWrap: true,
-
-                              physics:
-                                  const NeverScrollableScrollPhysics(),
-
-                              itemCount:
-                                  filteredClassrooms.length,
-
-                              itemBuilder:
-                                  (context, index) {
-                                final classroom =
-                                    filteredClassrooms[
-                                            index]
-                                        .data()
-                                        as Map<String,
-                                            dynamic>;
-
-                                final roomNo =
-                                    classroom['roomNo']
-                                            ?.toString() ??
-                                        "N/A";
-
-                                final status =
-                                    classroom['status']
-                                            ?.toString()
-                                            .toUpperCase() ??
-                                        "UNKNOWN";
-
-                                final course =
-                                    classroom['course']
-                                            ?.toString() ??
-                                        "";
-
-                                // --------------------------------------------------
-                                // STATUS COLORS
-                                // --------------------------------------------------
-
-                                Color statusColor;
-                                IconData statusIcon;
-
-                                if (status == "FREE") {
-                                  statusColor =
-                                      Colors.green;
-                                  statusIcon =
-                                      Icons.check_circle;
-                                } else if (status ==
-                                    "TEMPORARILY RESERVED") {
-                                  statusColor =
-                                      Colors.orange;
-                                  statusIcon =
-                                      Icons.access_time;
-                                } else if (status ==
-                                    "BOOKED") {
-                                  statusColor =
-                                      Colors.red;
-                                  statusIcon =
-                                      Icons.event_busy;
-                                } else {
-                                  statusColor =
-                                      primaryNavy;
-                                  statusIcon =
-                                      Icons.help_outline;
-                                }
-
-                                // --------------------------------------------------
-                                // CLASSROOM CARD
-                                // --------------------------------------------------
-
-                                return Card(
-                                  margin:
-                                      const EdgeInsets
-                                          .symmetric(
-                                    horizontal: 12,
-                                    vertical: 6,
-                                  ),
-
-                                  elevation: 2,
-
-                                  color: Colors.white,
-
-                                  shape:
-                                      RoundedRectangleBorder(
-                                    borderRadius:
-                                        BorderRadius
-                                            .circular(17),
-                                  ),
-
-                                  child: Padding(
-                                    padding:
-                                        const EdgeInsets
-                                            .all(14),
-
-                                    child: Column(
-                                      crossAxisAlignment:
-                                          CrossAxisAlignment
-                                              .start,
-
-                                      children: [
-
-                                        // --------------------------------------------------
-                                        // ROOM HEADER
-                                        // --------------------------------------------------
-
-                                        Container(
-                                          width:
-                                              double.infinity,
-
-                                          padding:
-                                              const EdgeInsets
-                                                  .symmetric(
-                                            vertical: 15,
-                                          ),
-
-                                          decoration:
-                                              BoxDecoration(
-                                            color:
-                                                statusColor,
-
-                                            borderRadius:
-                                                BorderRadius
-                                                    .circular(
-                                              12,
-                                            ),
-                                          ),
-
-                                          child: Text(
-                                            "ROOM $roomNo",
-
-                                            textAlign:
-                                                TextAlign
-                                                    .center,
-
-                                            style:
-                                                const TextStyle(
-                                              color:
-                                                  Colors.white,
-                                              fontSize: 21,
-                                              fontWeight:
-                                                  FontWeight
-                                                      .bold,
-                                            ),
-                                          ),
-                                        ),
-
-                                        const SizedBox(
-                                          height: 12,
-                                        ),
-
-                                        if (course.isNotEmpty)
-                                          Text(
-                                            "Course: $course",
-
-                                            style:
-                                                const TextStyle(
-                                              fontSize: 16,
-                                              color: darkNavy,
-                                              fontWeight:
-                                                  FontWeight
-                                                      .w500,
-                                            ),
-                                          ),
-
-                                        if (course.isNotEmpty)
-                                          const SizedBox(
-                                            height: 7,
-                                          ),
-
-                                        // --------------------------------------------------
-                                        // STATUS
-                                        // --------------------------------------------------
-
-                                        Row(
-                                          children: [
-                                            Icon(
-                                              statusIcon,
-                                              color:
-                                                  statusColor,
-                                              size: 20,
-                                            ),
-
-                                            const SizedBox(
-                                              width: 7,
-                                            ),
-
-                                            Expanded(
-                                              child: Text(
-                                                "Status: $status",
-
-                                                style:
-                                                    TextStyle(
-                                                  fontSize:
-                                                      15,
-                                                  fontWeight:
-                                                      FontWeight
-                                                          .bold,
-                                                  color:
-                                                      statusColor,
-                                                ),
-                                              ),
-                                            ),
-                                          ],
-                                        ),
-                                      ],
-                                    ),
-                                  ),
-                                );
-                              },
-                            );
-                          },
-                        ),
-                      ],
-                    ),
+                      const SizedBox(height: 10),
+                    ],
                   ),
                 ),
               );
