@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
-
 import 'booking_form_screen.dart';
 
 class BookClassroomScreen extends StatelessWidget {
@@ -12,38 +11,32 @@ class BookClassroomScreen extends StatelessWidget {
   });
 
   // Temporary reservation duration
-  static const Duration reservationDuration =
-      Duration(minutes: 5);
+  static const Duration reservationDuration = Duration(minutes: 5);
 
   // Classroom UI Colors
   static const Color darkNavy = Color(0xFF163B73);
   static const Color primaryNavy = Color(0xFF2F6DB2);
-  static const Color background = Colors.white;
+  static const Color background = Color(0xFFF5F0EB);
 
   Future<void> _startTemporaryReservation(
     BuildContext context,
     String documentId,
     String roomNo,
   ) async {
-    final classroomRef = FirebaseFirestore.instance
-        .collection('classrooms')
-        .doc(documentId);
+    final classroomRef =
+        FirebaseFirestore.instance.collection('classrooms').doc(documentId);
 
     try {
-      await FirebaseFirestore.instance
-          .runTransaction((transaction) async {
-        final snapshot =
-            await transaction.get(classroomRef);
+      await FirebaseFirestore.instance.runTransaction((transaction) async {
+        final snapshot = await transaction.get(classroomRef);
 
         if (!snapshot.exists) {
           throw Exception("Classroom not found");
         }
 
-        final data =
-            snapshot.data() as Map<String, dynamic>;
+        final data = snapshot.data() as Map<String, dynamic>;
 
-        final status =
-            data['status']?.toString().trim().toUpperCase() ?? "";
+        final status = data['status']?.toString().toUpperCase() ?? "";
 
         // Check current status before reserving
         if (status != "FREE") {
@@ -80,11 +73,9 @@ class BookClassroomScreen extends StatelessWidget {
       final snapshot = await classroomRef.get();
 
       if (snapshot.exists) {
-        final data =
-            snapshot.data() as Map<String, dynamic>;
+        final data = snapshot.data() as Map<String, dynamic>;
 
-        final status =
-            data['status']?.toString().toUpperCase() ?? "";
+        final status = data['status']?.toString().toUpperCase() ?? "";
 
         if (status == "TEMPORARILY RESERVED") {
           await classroomRef.update({
@@ -92,8 +83,7 @@ class BookClassroomScreen extends StatelessWidget {
             'course': '',
             'facultyName': '',
             'timeSlot': '',
-            'reservationExpiresAt':
-                FieldValue.delete(),
+            'reservationExpiresAt': FieldValue.delete(),
           });
         }
       }
@@ -104,8 +94,8 @@ class BookClassroomScreen extends StatelessWidget {
         SnackBar(
           content: Text(
             e.toString().contains(
-                  "no longer available",
-                )
+                      "no longer available",
+                    )
                 ? "This classroom is no longer available."
                 : "Unable to reserve the classroom.",
           ),
@@ -120,7 +110,6 @@ class BookClassroomScreen extends StatelessWidget {
     if (role == "student") {
       return Scaffold(
         backgroundColor: background,
-
         appBar: AppBar(
           title: const Text(
             "Access Denied",
@@ -133,14 +122,12 @@ class BookClassroomScreen extends StatelessWidget {
           foregroundColor: darkNavy,
           elevation: 0,
         ),
-
         body: Center(
           child: Padding(
             padding: const EdgeInsets.all(24),
             child: Container(
               width: double.infinity,
               padding: const EdgeInsets.all(24),
-
               decoration: BoxDecoration(
                 color: Colors.white,
                 borderRadius: BorderRadius.circular(17),
@@ -152,7 +139,6 @@ class BookClassroomScreen extends StatelessWidget {
                   ),
                 ],
               ),
-
               child: Column(
                 mainAxisSize: MainAxisSize.min,
                 children: [
@@ -161,9 +147,7 @@ class BookClassroomScreen extends StatelessWidget {
                     size: 55,
                     color: Colors.red,
                   ),
-
                   const SizedBox(height: 15),
-
                   const Text(
                     "Access Denied",
                     style: TextStyle(
@@ -172,9 +156,7 @@ class BookClassroomScreen extends StatelessWidget {
                       color: darkNavy,
                     ),
                   ),
-
                   const SizedBox(height: 8),
-
                   const Text(
                     "Students are not allowed to book classrooms.",
                     textAlign: TextAlign.center,
@@ -193,7 +175,6 @@ class BookClassroomScreen extends StatelessWidget {
 
     return Scaffold(
       backgroundColor: background,
-
       appBar: AppBar(
         title: const Text(
           "Book Classroom",
@@ -206,12 +187,14 @@ class BookClassroomScreen extends StatelessWidget {
         foregroundColor: darkNavy,
         elevation: 0,
       ),
-
       body: StreamBuilder<QuerySnapshot>(
         stream: FirebaseFirestore.instance
             .collection('classrooms')
+            .where(
+              'status',
+              isEqualTo: 'FREE',
+            )
             .snapshots(),
-
         builder: (context, snapshot) {
           if (snapshot.hasError) {
             return const Center(
@@ -225,8 +208,7 @@ class BookClassroomScreen extends StatelessWidget {
             );
           }
 
-          if (snapshot.connectionState ==
-              ConnectionState.waiting) {
+          if (snapshot.connectionState == ConnectionState.waiting) {
             return const Center(
               child: CircularProgressIndicator(
                 color: primaryNavy,
@@ -234,12 +216,7 @@ class BookClassroomScreen extends StatelessWidget {
             );
           }
 
-          final classrooms = (snapshot.data?.docs ?? [])
-              .where((classroom) {
-            final data = classroom.data() as Map<String, dynamic>;
-            return data['status']?.toString().trim().toUpperCase() ==
-                'FREE';
-          }).toList();
+          final classrooms = snapshot.data?.docs ?? [];
 
           if (classrooms.isEmpty) {
             return Center(
@@ -248,13 +225,10 @@ class BookClassroomScreen extends StatelessWidget {
                 child: Container(
                   width: double.infinity,
                   padding: const EdgeInsets.all(25),
-
                   decoration: BoxDecoration(
                     color: Colors.white,
-                    borderRadius:
-                        BorderRadius.circular(17),
+                    borderRadius: BorderRadius.circular(17),
                   ),
-
                   child: Column(
                     mainAxisSize: MainAxisSize.min,
                     children: [
@@ -263,9 +237,7 @@ class BookClassroomScreen extends StatelessWidget {
                         size: 55,
                         color: primaryNavy,
                       ),
-
                       const SizedBox(height: 12),
-
                       const Text(
                         "No Free Classrooms",
                         style: TextStyle(
@@ -274,9 +246,7 @@ class BookClassroomScreen extends StatelessWidget {
                           color: darkNavy,
                         ),
                       ),
-
                       const SizedBox(height: 6),
-
                       const Text(
                         "No free classrooms are currently available for booking.",
                         textAlign: TextAlign.center,
@@ -293,7 +263,6 @@ class BookClassroomScreen extends StatelessWidget {
 
           return Column(
             children: [
-
               // -----------------------------
               // BLUE GRADIENT HEADER
               // -----------------------------
@@ -305,11 +274,9 @@ class BookClassroomScreen extends StatelessWidget {
                   12,
                   6,
                 ),
-
                 child: Container(
                   width: double.infinity,
                   padding: const EdgeInsets.all(18),
-
                   decoration: BoxDecoration(
                     gradient: const LinearGradient(
                       colors: [
@@ -319,55 +286,40 @@ class BookClassroomScreen extends StatelessWidget {
                       begin: Alignment.centerLeft,
                       end: Alignment.centerRight,
                     ),
-                    borderRadius:
-                        BorderRadius.circular(17),
+                    borderRadius: BorderRadius.circular(17),
                   ),
-
                   child: Row(
                     children: [
-
                       Container(
-                        padding:
-                            const EdgeInsets.all(10),
-
+                        padding: const EdgeInsets.all(10),
                         decoration: BoxDecoration(
-                          color: Colors.white
-                              .withOpacity(0.15),
-                          borderRadius:
-                              BorderRadius.circular(12),
+                          color: Colors.white.withOpacity(0.15),
+                          borderRadius: BorderRadius.circular(12),
                         ),
-
                         child: const Icon(
                           Icons.book_online,
                           color: Colors.white,
                           size: 30,
                         ),
                       ),
-
                       const SizedBox(width: 14),
-
                       Expanded(
                         child: Column(
-                          crossAxisAlignment:
-                              CrossAxisAlignment.start,
+                          crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             const Text(
                               "Book a Classroom",
                               style: TextStyle(
                                 color: Colors.white,
                                 fontSize: 20,
-                                fontWeight:
-                                    FontWeight.bold,
+                                fontWeight: FontWeight.bold,
                               ),
                             ),
-
                             const SizedBox(height: 4),
-
                             Text(
                               "${classrooms.length} classroom(s) available",
                               style: TextStyle(
-                                color: Colors.white
-                                    .withOpacity(0.9),
+                                color: Colors.white.withOpacity(0.9),
                                 fontSize: 14,
                               ),
                             ),
@@ -385,45 +337,29 @@ class BookClassroomScreen extends StatelessWidget {
 
               Expanded(
                 child: ListView.builder(
-                  padding:
-                      const EdgeInsets.only(
+                  padding: const EdgeInsets.only(
                     top: 4,
                     bottom: 12,
                   ),
-
                   itemCount: classrooms.length,
-
                   itemBuilder: (context, index) {
                     final classroom =
-                        classrooms[index].data()
-                            as Map<String, dynamic>;
+                        classrooms[index].data() as Map<String, dynamic>;
 
-                    final roomNo =
-                        classroom['roomNo']
-                                ?.toString() ??
-                            "";
+                    final roomNo = classroom['roomNo']?.toString() ?? "";
 
                     return Card(
-                      margin:
-                          const EdgeInsets.symmetric(
+                      margin: const EdgeInsets.symmetric(
                         horizontal: 12,
                         vertical: 6,
                       ),
-
                       elevation: 2,
-
                       color: Colors.white,
-
-                      shape:
-                          RoundedRectangleBorder(
-                        borderRadius:
-                            BorderRadius.circular(17),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(17),
                       ),
-
                       child: InkWell(
-                        borderRadius:
-                            BorderRadius.circular(17),
-
+                        borderRadius: BorderRadius.circular(17),
                         onTap: () {
                           _startTemporaryReservation(
                             context,
@@ -431,33 +367,23 @@ class BookClassroomScreen extends StatelessWidget {
                             roomNo,
                           );
                         },
-
                         child: Padding(
-                          padding:
-                              const EdgeInsets.all(14),
-
+                          padding: const EdgeInsets.all(14),
                           child: Row(
                             children: [
-
                               // ROOM ICON
                               Container(
                                 width: 58,
                                 height: 58,
-
-                                decoration:
-                                    BoxDecoration(
-                                  gradient:
-                                      const LinearGradient(
+                                decoration: BoxDecoration(
+                                  gradient: const LinearGradient(
                                     colors: [
                                       darkNavy,
                                       primaryNavy,
                                     ],
                                   ),
-                                  borderRadius:
-                                      BorderRadius
-                                          .circular(14),
+                                  borderRadius: BorderRadius.circular(14),
                                 ),
-
                                 child: const Icon(
                                   Icons.class_,
                                   color: Colors.white,
@@ -470,52 +396,37 @@ class BookClassroomScreen extends StatelessWidget {
                               // ROOM DETAILS
                               Expanded(
                                 child: Column(
-                                  crossAxisAlignment:
-                                      CrossAxisAlignment
-                                          .start,
-
+                                  crossAxisAlignment: CrossAxisAlignment.start,
                                   children: [
                                     Text(
                                       "ROOM $roomNo",
-                                      style:
-                                          const TextStyle(
+                                      style: const TextStyle(
                                         fontSize: 18,
-                                        fontWeight:
-                                            FontWeight.bold,
+                                        fontWeight: FontWeight.bold,
                                         color: darkNavy,
                                       ),
                                     ),
-
                                     const SizedBox(
                                       height: 5,
                                     ),
-
                                     Row(
                                       children: [
                                         Container(
                                           width: 9,
                                           height: 9,
-                                          decoration:
-                                              const BoxDecoration(
-                                            color:
-                                                Colors.green,
-                                            shape:
-                                                BoxShape
-                                                    .circle,
+                                          decoration: const BoxDecoration(
+                                            color: Colors.green,
+                                            shape: BoxShape.circle,
                                           ),
                                         ),
-
                                         const SizedBox(
                                           width: 7,
                                         ),
-
                                         const Text(
                                           "Available for booking",
                                           style: TextStyle(
-                                            color:
-                                                Colors.green,
-                                            fontWeight:
-                                                FontWeight.w600,
+                                            color: Colors.green,
+                                            fontWeight: FontWeight.w600,
                                             fontSize: 13,
                                           ),
                                         ),
@@ -527,23 +438,15 @@ class BookClassroomScreen extends StatelessWidget {
 
                               // ARROW
                               Container(
-                                padding:
-                                    const EdgeInsets.all(
+                                padding: const EdgeInsets.all(
                                   9,
                                 ),
-
-                                decoration:
-                                    BoxDecoration(
-                                  color: primaryNavy
-                                      .withOpacity(0.10),
-                                  borderRadius:
-                                      BorderRadius
-                                          .circular(10),
+                                decoration: BoxDecoration(
+                                  color: primaryNavy.withOpacity(0.10),
+                                  borderRadius: BorderRadius.circular(10),
                                 ),
-
                                 child: const Icon(
-                                  Icons
-                                      .arrow_forward_ios,
+                                  Icons.arrow_forward_ios,
                                   color: primaryNavy,
                                   size: 18,
                                 ),
