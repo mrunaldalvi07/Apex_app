@@ -24,7 +24,7 @@ class _ClassroomScreenState extends State<ClassroomScreen> {
   // Classroom UI Colors
   static const Color darkNavy = Color(0xFF163B73);
   static const Color primaryNavy = Color(0xFF2F6DB2);
-  static const Color background = Color(0xFFF5F0EB);
+  static const Color background = Colors.white;
 
   @override
   void dispose() {
@@ -111,6 +111,7 @@ class _ClassroomScreenState extends State<ClassroomScreen> {
             final status =
                 data['status']
                         ?.toString()
+                        .trim()
                         .toUpperCase() ??
                     "";
 
@@ -358,7 +359,9 @@ class _ClassroomScreenState extends State<ClassroomScreen> {
                                   14,
                                 ),
                                 borderSide:
-                                    BorderSide.none,
+                                    BorderSide(
+                                  color: Colors.grey.shade300,
+                                ),
                               ),
 
                               enabledBorder:
@@ -368,7 +371,9 @@ class _ClassroomScreenState extends State<ClassroomScreen> {
                                   14,
                                 ),
                                 borderSide:
-                                    BorderSide.none,
+                                    BorderSide(
+                                  color: Colors.grey.shade300,
+                                ),
                               ),
 
                               focusedBorder:
@@ -457,6 +462,7 @@ class _ClassroomScreenState extends State<ClassroomScreen> {
                               final status =
                                   data['status']
                                           ?.toString()
+                                          .trim()
                                           .toUpperCase() ??
                                       "";
 
@@ -540,6 +546,7 @@ class _ClassroomScreenState extends State<ClassroomScreen> {
                                 final status =
                                     classroom['status']
                                             ?.toString()
+                                            .trim()
                                             .toUpperCase() ??
                                         "UNKNOWN";
 
