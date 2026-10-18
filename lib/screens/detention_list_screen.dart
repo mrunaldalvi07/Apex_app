@@ -51,13 +51,8 @@ class _DetentionListScreenState extends State<DetentionListScreen> {
   // ============================================================
 
   final List<String> branches = [
-    'IT',
     'CM',
     'IF',
-    'CO',
-    'ME',
-    'CE',
-    'EE',
   ];
 
   final List<String> years = [

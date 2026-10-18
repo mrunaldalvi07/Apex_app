@@ -32,13 +32,8 @@ class _AttendanceReportScreenState extends State<AttendanceReportScreen> {
   // ============================================================
 
   final List<String> _branches = <String>[
-    'IT',
-    'CM',
     'IF',
-    'CO',
-    'ME',
-    'CE',
-    'EE',
+    'CM',
   ];
 
   final List<String> _years = <String>[
