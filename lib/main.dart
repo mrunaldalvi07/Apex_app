@@ -7,6 +7,7 @@ import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'firebase_options.dart';
 import 'auth/login_screen.dart';
 import 'auth/role_router.dart';
+import 'screens/intro_screen.dart';
 
 final FlutterLocalNotificationsPlugin flutterLocalNotificationsPlugin =
     FlutterLocalNotificationsPlugin();
@@ -82,7 +83,7 @@ class ApexApp extends StatelessWidget {
       debugShowCheckedModeBanner: false,
       title: 'APEX',
       theme: ThemeData(useMaterial3: true, colorSchemeSeed: Colors.indigo),
-      home: const AuthWrapper(),
+     home: const IntroScreen(),
       routes: {'/login': (context) => const LoginScreen()},
     );
   }

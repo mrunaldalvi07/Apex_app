@@ -18,7 +18,7 @@ class BookClassroomScreen extends StatelessWidget {
   // Classroom UI Colors
   static const Color darkNavy = Color(0xFF163B73);
   static const Color primaryNavy = Color(0xFF2F6DB2);
-  static const Color background = Color(0xFFF5F0EB);
+  static const Color background = Colors.white;
 
   Future<void> _startTemporaryReservation(
     BuildContext context,
@@ -43,7 +43,7 @@ class BookClassroomScreen extends StatelessWidget {
             snapshot.data() as Map<String, dynamic>;
 
         final status =
-            data['status']?.toString().toUpperCase() ?? "";
+            data['status']?.toString().trim().toUpperCase() ?? "";
 
         // Check current status before reserving
         if (status != "FREE") {
@@ -210,10 +210,6 @@ class BookClassroomScreen extends StatelessWidget {
       body: StreamBuilder<QuerySnapshot>(
         stream: FirebaseFirestore.instance
             .collection('classrooms')
-            .where(
-              'status',
-              isEqualTo: 'FREE',
-            )
             .snapshots(),
 
         builder: (context, snapshot) {
@@ -238,8 +234,12 @@ class BookClassroomScreen extends StatelessWidget {
             );
           }
 
-          final classrooms =
-              snapshot.data?.docs ?? [];
+          final classrooms = (snapshot.data?.docs ?? [])
+              .where((classroom) {
+            final data = classroom.data() as Map<String, dynamic>;
+            return data['status']?.toString().trim().toUpperCase() ==
+                'FREE';
+          }).toList();
 
           if (classrooms.isEmpty) {
             return Center(
