@@ -11,7 +11,7 @@ class AttendanceConstants {
   static const background = Color(0xFFF6F9FC);
   static const textGrey = Color(0xFF6B7C93);
   
-  static const branches = ['IF', 'CM'];
+  static const branches = ['IT', 'CM'];
   static const years = ['1', '2', '3'];
 
   static const months = [

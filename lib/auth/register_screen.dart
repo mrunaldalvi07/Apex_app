@@ -2,8 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 
-import 'role_router.dart';
-
 class RegisterScreen extends StatefulWidget {
   const RegisterScreen({super.key});
 
@@ -27,37 +25,49 @@ class _RegisterScreenState extends State<RegisterScreen> {
     try {
       setState(() => loading = true);
 
-      UserCredential userCredential = await FirebaseAuth.instance
+      final userCredential = await FirebaseAuth.instance
           .createUserWithEmailAndPassword(
             email: emailController.text.trim(),
             password: passwordController.text.trim(),
           );
 
-      await FirebaseFirestore.instance
-          .collection('users')
-          .doc(userCredential.user!.uid)
-          .set({
-            'uid': userCredential.user!.uid,
-            'name': nameController.text.trim(),
-            'email': emailController.text.trim(),
-            'rollNo': rollNoController.text.trim(),
-            'branch': selectedBranch,
-            'year': selectedYear,
-            'role': selectedRole,
-            'createdAt': FieldValue.serverTimestamp(),
-          });
+      try {
+        await FirebaseFirestore.instance
+            .collection('users')
+            .doc(userCredential.user!.uid)
+            .set({
+              'uid': userCredential.user!.uid,
+              'name': nameController.text.trim(),
+              'email': emailController.text.trim(),
+              'rollNo': rollNoController.text.trim(),
+              'branch': selectedBranch,
+              'year': selectedYear,
+              'role': selectedRole,
+              'createdAt': FieldValue.serverTimestamp(),
+            });
+      } catch (_) {
+        // Do not leave an Authentication account behind when its Firestore
+        // profile could not be created. That email can then be registered again.
+        try {
+          await userCredential.user?.delete();
+        } catch (_) {
+          // Preserve the Firestore error shown below if the cleanup fails.
+        }
+        rethrow;
+      }
 
       if (!mounted) return;
 
-      Navigator.pushAndRemoveUntil(
-        context,
-        MaterialPageRoute(builder: (_) => const RoleRouter()),
-        (route) => false,
-      );
+      // Return to AuthWrapper. It receives the auth-state update and selects
+      // the new account's dashboard.
+      Navigator.pop(context);
     } on FirebaseAuthException catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(e.message ?? 'Registration Failed')),
-      );
+      final message = e.code == 'email-already-in-use'
+          ? 'This email is already registered. Sign in, or remove the account from Firebase Authentication first.'
+          : e.message ?? 'Registration failed';
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(message)));
     } catch (e) {
       ScaffoldMessenger.of(
         context,

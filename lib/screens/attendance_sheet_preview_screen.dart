@@ -1,5 +1,6 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
+import '../services/attendance_export_service.dart';
 
 class AttendanceSheetPreview extends StatefulWidget {
   final String branch;
@@ -45,6 +46,45 @@ class _AttendanceSheetPreviewState
 
   List<Map<String, dynamic>> students = [];
   List<Map<String, dynamic>> sessions = [];
+  final Map<String, String> editedMarks = {};
+  bool isDownloading = false;
+
+  String _markKey(String sessionId, String studentId) => '$sessionId::$studentId';
+
+  Future<void> _editAttendanceMark(String sessionId, String studentId, String current) async {
+    final selected = await showDialog<String>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: const Text('Edit attendance'),
+        content: const Text('Select the attendance status for this student.'),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(dialogContext, 'P'), child: const Text('Present (P)')),
+          TextButton(onPressed: () => Navigator.pop(dialogContext, 'A'), child: const Text('Absent (A)')),
+          TextButton(onPressed: () => Navigator.pop(dialogContext), child: const Text('Cancel')),
+        ],
+      ),
+    );
+    if (selected != null && mounted) {
+      setState(() => editedMarks[_markKey(sessionId, studentId)] = selected);
+    }
+  }
+
+  Future<void> _downloadEditedSheet() async {
+    if (isDownloading) return;
+    setState(() => isDownloading = true);
+    try {
+      final path = await AttendanceExportService().downloadAttendanceExcel(
+        branch: widget.branch, year: widget.year, course: widget.course,
+        month: widget.month, editedMarks: editedMarks,
+      );
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+        content: Text(path == null ? 'Save cancelled.' : 'Excel workbook saved: $path'),
+      ));
+    } catch (e) {
+      if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Download failed: $e')));
+    } finally { if (mounted) setState(() => isDownloading = false); }
+  }
 
   // ============================================================
   // MONTH NUMBER
@@ -122,10 +162,10 @@ class _AttendanceSheetPreviewState
 
       loadedStudents.sort((a, b) {
         final rollA =
-            (a['rollNo'] ?? '').toString();
+            (a['rollNo'] ?? a['rollNumber'] ?? '').toString();
 
         final rollB =
-            (b['rollNo'] ?? '').toString();
+            (b['rollNo'] ?? b['rollNumber'] ?? '').toString();
 
         final numberA =
             int.tryParse(rollA);
@@ -157,7 +197,7 @@ class _AttendanceSheetPreviewState
           )
           .where(
             'course',
-            isEqualTo: widget.course,
+            isEqualTo: widget.course.trim().toUpperCase(),
           )
           .where(
             'status',
@@ -249,13 +289,15 @@ class _AttendanceSheetPreviewState
 
       final data = doc.data();
 
-      if (data?['status'] == 'Present') {
+      final status = data?['status'];
+      if (status == 'Present' || status == 'present' || status == 'P' || status == true) {
         return 'P';
       }
 
       return 'A';
-    } catch (_) {
-      return 'A';
+    } catch (e) {
+      // Do not silently turn a Firestore/network error into an Absent mark.
+      rethrow;
     }
   }
 
@@ -271,10 +313,10 @@ class _AttendanceSheetPreviewState
         student['id'].toString();
 
     final rollNo =
-        (student['rollNo'] ?? '').toString();
+        (student['rollNo'] ?? student['rollNumber'] ?? '').toString();
 
     final name =
-        (student['name'] ?? '').toString();
+        (student['name'] ?? student['displayName'] ?? student['fullName'] ?? '').toString();
 
     return FutureBuilder<List<String>>(
       future: Future.wait(
@@ -289,6 +331,9 @@ class _AttendanceSheetPreviewState
         context,
         snapshot,
       ) {
+        if (snapshot.hasError) {
+          return _buildLoadingRow(index, rollNo, 'Attendance read error');
+        }
         if (!snapshot.hasData) {
           return _buildLoadingRow(
             index,
@@ -297,7 +342,10 @@ class _AttendanceSheetPreviewState
           );
         }
 
-        final marks = snapshot.data!;
+        final marks = List<String>.generate(snapshot.data!.length, (i) {
+          final sessionId = sessions[i]['id'].toString();
+          return editedMarks[_markKey(sessionId, studentId)] ?? snapshot.data![i];
+        });
 
         int present = 0;
         int absent = 0;
@@ -317,7 +365,7 @@ class _AttendanceSheetPreviewState
             : (present / total) * 100;
 
         final detained =
-            percentage < 75;
+            total > 0 && percentage < 75;
 
         return Container(
           decoration: BoxDecoration(
@@ -352,8 +400,10 @@ class _AttendanceSheetPreviewState
               ...List.generate(
                 marks.length,
                 (i) {
+                  final sessionId = sessions[i]['id'].toString();
                   return _attendanceCell(
                     marks[i],
+                    onTap: () => _editAttendanceMark(sessionId, studentId, marks[i]),
                   );
                 },
               ),
@@ -395,9 +445,7 @@ class _AttendanceSheetPreviewState
                           BorderRadius.circular(8),
                     ),
                     child: Text(
-                      detained
-                          ? 'Detained'
-                          : 'Regular',
+                      total == 0 ? 'No Classes' : (detained ? 'Detained' : 'Regular'),
                       style: TextStyle(
                         color: detained
                             ? warningOrange
@@ -521,14 +569,16 @@ class _AttendanceSheetPreviewState
   // ============================================================
 
   Widget _attendanceCell(
-    String mark,
+    String mark, {VoidCallback? onTap}
   ) {
     final present = mark == 'P';
 
     return SizedBox(
       width: 55,
       height: 55,
-      child: Center(
+      child: InkWell(
+        onTap: onTap,
+        child: Center(
         child: Container(
           width: 28,
           height: 28,
@@ -555,6 +605,7 @@ class _AttendanceSheetPreviewState
             ),
           ),
         ),
+      ),
       ),
     );
   }
@@ -817,12 +868,17 @@ class _AttendanceSheetPreviewState
         foregroundColor: Colors.white,
         elevation: 0,
         title: const Text(
-          'Attendance Sheet Preview',
+          'Editable Attendance Sheet Preview',
           style: TextStyle(
             fontWeight: FontWeight.bold,
           ),
         ),
         actions: [
+          IconButton(
+            onPressed: isLoading || isDownloading ? null : _downloadEditedSheet,
+            icon: isDownloading ? const SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white)) : const Icon(Icons.download),
+            tooltip: 'Download editable Excel workbook',
+          ),
           IconButton(
             onPressed:
                 isLoading ? null : _loadPreview,
@@ -918,6 +974,8 @@ class _AttendanceSheetPreviewState
                           ),
 
                           _buildSummaryBar(),
+                          const SizedBox(height: 8),
+                          const Text('Tap any P/A cell to edit attendance. Changes are included in the downloaded Excel workbook.', style: TextStyle(fontSize: 11, color: Colors.black54)),
                         ],
                       ),
                     ),

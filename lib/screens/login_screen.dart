@@ -1,9 +1,8 @@
 import 'package:flutter/material.dart';
-
-import 'student_screen.dart';
-import 'faculty_screen.dart';
-import 'cr_screen.dart';
-import 'admin_screen.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import '../services/fcm_service.dart';
+import 'register_screen.dart';
+import 'role_router.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -13,124 +12,189 @@ class LoginScreen extends StatefulWidget {
 }
 
 class _LoginScreenState extends State<LoginScreen> {
-  String selectedRole = "student";
+  final emailController = TextEditingController();
+  final passwordController = TextEditingController();
+
+  bool loading = false;
+  bool obscurePassword = true;
+
+  Future<void> login() async {
+    try {
+      if (emailController.text.trim().isEmpty ||
+          passwordController.text.trim().isEmpty) {
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(const SnackBar(content: Text("Please fill all fields")));
+        return;
+      }
+
+      setState(() {
+        loading = true;
+      });
+
+      await FirebaseAuth.instance.signInWithEmailAndPassword(
+        email: emailController.text.trim(),
+        password: passwordController.text.trim(),
+      );
+
+      if (!context.mounted) return;
+
+      await FCMService().initialize();
+
+      if (!mounted) return;
+
+      Navigator.pushReplacement(
+        context,
+        MaterialPageRoute(builder: (_) => const RoleRouter()),
+      );
+    } on FirebaseAuthException catch (e) {
+      if (!mounted) return;
+
+      String errorMessage = e.message ?? "Login Failed";
+      if (e.code == 'user-not-found') {
+        errorMessage = "No user found with this email";
+      } else if (e.code == 'wrong-password') {
+        errorMessage = "Incorrect password";
+      } else if (e.code == 'invalid-email') {
+        errorMessage = "Invalid email address";
+      }
+
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(errorMessage)));
+    } finally {
+      if (mounted) {
+        setState(() {
+          loading = false;
+        });
+      }
+    }
+  }
+
+
+
+  @override
+  void dispose() {
+    emailController.dispose();
+    passwordController.dispose();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: const Text("Role Selection"),
-        centerTitle: true,
-      ),
-      body: Padding(
+      appBar: AppBar(title: const Text("APEX Login"), centerTitle: true),
+      body: SingleChildScrollView(
         padding: const EdgeInsets.all(20),
         child: Column(
           children: [
             const SizedBox(height: 30),
 
             const Text(
-              "APEX Classroom Scheduler",
+              "APEX",
               style: TextStyle(
-                fontSize: 28,
+                fontSize: 36,
                 fontWeight: FontWeight.bold,
+                color: Colors.indigo,
               ),
             ),
 
-            const SizedBox(height: 40),
-
-            RadioListTile<String>(
-              title: const Text("Student"),
-              value: "student",
-              groupValue: selectedRole,
-              onChanged: (value) {
-                setState(() {
-                  selectedRole = value!;
-                });
-              },
+            const Text(
+              "Complaint Management System",
+              style: TextStyle(fontSize: 14, color: Colors.grey),
             ),
 
-            RadioListTile<String>(
-              title: const Text("Faculty"),
-              value: "faculty",
-              groupValue: selectedRole,
-              onChanged: (value) {
-                setState(() {
-                  selectedRole = value!;
-                });
-              },
-            ),
+            const SizedBox(height: 50),
 
-            RadioListTile<String>(
-              title: const Text("CR"),
-              value: "cr",
-              groupValue: selectedRole,
-              onChanged: (value) {
-                setState(() {
-                  selectedRole = value!;
-                });
-              },
-            ),
-
-            RadioListTile<String>(
-              title: const Text("Admin"),
-              value: "admin",
-              groupValue: selectedRole,
-              onChanged: (value) {
-                setState(() {
-                  selectedRole = value!;
-                });
-              },
-            ),
-
-            const Spacer(),
-
-            SizedBox(
-              width: double.infinity,
-              height: 50,
-              child: ElevatedButton(
-                onPressed: () {
-
-                  Widget nextScreen;
-
-                  switch (selectedRole) {
-                    case "student":
-                      nextScreen = const StudentScreen();
-                      break;
-
-                    case "faculty":
-                      nextScreen = const FacultyScreen();
-                      break;
-
-                    case "cr":
-                      nextScreen = const CrScreen();
-                      break;
-
-                    case "admin":
-                      nextScreen = const AdminScreen();
-                      break;
-
-                    default:
-                      nextScreen = const StudentScreen();
-                  }
-
-                  Navigator.pushReplacement(
-                    context,
-                    MaterialPageRoute(
-                      builder: (_) => nextScreen,
-                    ),
-                  );
-                },
-                child: const Text(
-                  "CONTINUE",
-                  style: TextStyle(
-                    fontSize: 18,
-                    fontWeight: FontWeight.bold,
-                  ),
+            TextField(
+              controller: emailController,
+              enabled: !loading,
+              decoration: InputDecoration(
+                labelText: "Email",
+                hintText: "Enter your email",
+                prefixIcon: const Icon(Icons.email),
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(12),
                 ),
               ),
             ),
 
-            const SizedBox(height: 20),
+            const SizedBox(height: 15),
+
+            TextField(
+              controller: passwordController,
+              enabled: !loading,
+              obscureText: obscurePassword,
+              decoration: InputDecoration(
+                labelText: "Password",
+                hintText: "Enter your password",
+                prefixIcon: const Icon(Icons.lock),
+                suffixIcon: IconButton(
+                  icon: Icon(
+                    obscurePassword ? Icons.visibility_off : Icons.visibility,
+                  ),
+                  onPressed: () {
+                    setState(() {
+                      obscurePassword = !obscurePassword;
+                    });
+                  },
+                ),
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
+              ),
+            ),
+
+            const SizedBox(height: 25),
+
+            SizedBox(
+              width: double.infinity,
+              height: 50,
+              child: ElevatedButton.icon(
+                icon: loading
+                    ? const SizedBox(
+                        width: 20,
+                        height: 20,
+                        child: CircularProgressIndicator(
+                          strokeWidth: 2,
+                          valueColor: AlwaysStoppedAnimation<Color>(
+                            Colors.white,
+                          ),
+                        ),
+                      )
+                    : const Icon(Icons.login),
+                label: Text(
+                  loading ? "Logging in..." : "LOGIN",
+                  style: const TextStyle(fontSize: 16),
+                ),
+                onPressed: (loading) ? null : login,
+              ),
+            ),
+
+            const SizedBox(height: 15),
+
+            Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                const Text("Don't have an account? "),
+                TextButton(
+                  onPressed: (loading)
+                      ? null
+                      : () {
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (_) => const RegisterScreen(),
+                            ),
+                          );
+                        },
+                  child: const Text(
+                    "Register Here",
+                    style: TextStyle(fontWeight: FontWeight.bold),
+                  ),
+                ),
+              ],
+            ),
           ],
         ),
       ),

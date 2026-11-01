@@ -1,8 +1,8 @@
-import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 
 import '../models/attendance_summary_model.dart';
 import '../widgets/attendance_ui.dart';
+import '../services/attendance_summary_service.dart';
 
 class AttendanceSummaryScreen extends StatefulWidget {
   final String branch;
@@ -25,8 +25,7 @@ class AttendanceSummaryScreen extends StatefulWidget {
 
 class _AttendanceSummaryScreenState
     extends State<AttendanceSummaryScreen> {
-  final FirebaseFirestore _firestore =
-      FirebaseFirestore.instance;
+  final AttendanceSummaryService _summaryService = AttendanceSummaryService();
 
   bool loading = true;
 
@@ -60,165 +59,13 @@ class _AttendanceSummaryScreenState
     loadSummary();
   }
 
-  Future<List<AttendanceSummaryModel>>
-      _getSummary() async {
-    final studentsSnapshot =
-        await _firestore
-            .collection('users')
-            .where(
-              'role',
-              isEqualTo: 'student',
-            )
-            .where(
-              'branch',
-              isEqualTo: widget.branch,
-            )
-            .where(
-              'year',
-              isEqualTo: widget.year,
-            )
-            .get();
-
-    final sessionsSnapshot =
-        await _firestore
-            .collection('live_sessions')
-            .where(
-              'branch',
-              isEqualTo: widget.branch,
-            )
-            .where(
-              'year',
-              isEqualTo: widget.year,
-            )
-            .where(
-              'course',
-              isEqualTo: widget.course,
-            )
-            .where(
-              'status',
-              isEqualTo: 'ended',
-            )
-            .get();
-
-    final monthNumber =
-        months.indexOf(widget.month);
-
-    final sessions =
-        sessionsSnapshot.docs.where((doc) {
-      final value =
-          doc.data()['createdAt'];
-
-      if (value is! Timestamp) {
-        return false;
-      }
-
-      return value.toDate().month ==
-          monthNumber;
-    }).toList();
-
-    sessions.sort((a, b) {
-      final aTime =
-          a.data()['createdAt'] as Timestamp;
-      final bTime =
-          b.data()['createdAt'] as Timestamp;
-
-      return aTime
-          .toDate()
-          .compareTo(
-            bTime.toDate(),
-          );
-    });
-
-    final students =
-        studentsSnapshot.docs.toList();
-
-    students.sort((a, b) {
-      final rollA =
-          (a.data()['rollNo'] ?? '')
-              .toString();
-
-      final rollB =
-          (b.data()['rollNo'] ?? '')
-              .toString();
-
-      final numA =
-          int.tryParse(rollA);
-
-      final numB =
-          int.tryParse(rollB);
-
-      if (numA != null && numB != null) {
-        return numA.compareTo(numB);
-      }
-
-      return rollA.compareTo(rollB);
-    });
-
-    final result =
-        <AttendanceSummaryModel>[];
-
-    for (final student in students) {
-      int present = 0;
-      int absent = 0;
-
-      for (final session in sessions) {
-        final attendance =
-            await _firestore
-                .collection('attendance')
-                .doc(session.id)
-                .collection('students')
-                .doc(student.id)
-                .get();
-
-        final status =
-            attendance.data()?['status'];
-
-        if (status == 'Present' ||
-            status == 'present' ||
-            status == true) {
-          present++;
-        } else {
-          absent++;
-        }
-      }
-
-      final totalClasses =
-          sessions.length;
-
-      final percentage =
-          totalClasses == 0
-              ? 0.0
-              : present /
-                      totalClasses *
-                  100;
-
-      final data =
-          student.data();
-
-      result.add(
-        AttendanceSummaryModel(
-          studentId: student.id,
-          rollNo:
-              (data['rollNo'] ?? '')
-                  .toString(),
-          studentName:
-              (data['name'] ??
-                      data['displayName'] ??
-                      '')
-                  .toString(),
-          present: present,
-          absent: absent,
-          totalClasses: totalClasses,
-          attendancePercentage:
-              percentage,
-          status: percentage >= 75
-              ? 'Regular'
-              : 'Detained',
-        ),
-      );
-    }
-
-    return result;
+  Future<List<AttendanceSummaryModel>> _getSummary() {
+    return _summaryService.getAttendanceSummary(
+      branch: widget.branch,
+      year: widget.year,
+      course: widget.course,
+      month: widget.month,
+    );
   }
 
   Future<void> loadSummary() async {
@@ -229,36 +76,24 @@ class _AttendanceSummaryScreenState
 
       totalStudents = summary.length;
 
-      regularStudents = summary
-          .where(
-            (student) =>
-                student.attendancePercentage >=
-                75,
-          )
+      final activeStudents = summary
+          .where((student) => student.totalClasses > 0)
+          .toList();
+
+      regularStudents = activeStudents
+          .where((student) => student.attendancePercentage >= 75)
           .length;
 
-      detainedStudents = summary
-          .where(
-            (student) =>
-                student.attendancePercentage <
-                75,
-          )
+      detainedStudents = activeStudents
+          .where((student) => student.attendancePercentage < 75)
           .length;
 
-      if (summary.isEmpty) {
-        averageAttendance = 0;
-      } else {
-        averageAttendance =
-            summary
-                    .map(
-                      (e) =>
-                          e.attendancePercentage,
-                    )
-                    .reduce(
-                      (a, b) => a + b,
-                    ) /
-                summary.length;
-      }
+      averageAttendance = activeStudents.isEmpty
+          ? 0
+          : activeStudents
+                  .map((student) => student.attendancePercentage)
+                  .reduce((a, b) => a + b) /
+              activeStudents.length;
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context)
