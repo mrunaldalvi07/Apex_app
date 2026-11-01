@@ -20,11 +20,6 @@ class _AttendanceReportScreenState
   final List<String> branches = [
     'IT',
     'CM',
-    'IF',
-    'CO',
-    'ME',
-    'CE',
-    'EE',
   ];
 
   final List<String> years = [
