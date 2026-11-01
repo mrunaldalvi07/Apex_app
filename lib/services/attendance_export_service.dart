@@ -24,7 +24,7 @@ class AttendanceExportService {
     'December',
   ];
 
-  // Converts 1, 2, 3 into 1 Year, 2 Year, 3 Year.
+  // Converts 1, 2, 3 into 1 Year, 2 Year, 3 Year (used only for file name).
   String _displayYear(String year) {
     final value = year.trim().toLowerCase();
 
@@ -69,6 +69,7 @@ class AttendanceExportService {
         status == 'true';
   }
 
+  // Students: same filters as the live attendance screen.
   Future<List<Map<String, dynamic>>> _getStudents(
     String branch,
     String year,
@@ -99,6 +100,8 @@ class AttendanceExportService {
     return students;
   }
 
+  // Sessions: same fields as saved by the live attendance screen.
+  // course is stored in UPPERCASE there, so it is queried in UPPERCASE here.
   Future<List<Map<String, dynamic>>> _getSessions(
     String branch,
     String year,
@@ -108,7 +111,7 @@ class AttendanceExportService {
         .collection('live_sessions')
         .where('branch', isEqualTo: branch)
         .where('year', isEqualTo: year)
-        .where('course', isEqualTo: course)
+        .where('course', isEqualTo: course.trim().toUpperCase())
         .where('status', isEqualTo: 'ended')
         .get();
 
@@ -153,7 +156,6 @@ class AttendanceExportService {
   // Styles copied from the approved Excel template.
   // ---------------------------------------------------------------------------
 
-  // Row 1: "ATTENDANCE REGISTER - Month" (bold, 16, centered).
   CellStyle get _titleStyle => CellStyle(
         bold: true,
         fontSize: 16,
@@ -161,7 +163,6 @@ class AttendanceExportService {
         verticalAlign: VerticalAlign.Center,
       );
 
-  // Row 2: "Branch: .. Year: .. Course: .." (bold, 11, centered).
   CellStyle get _subTitleStyle => CellStyle(
         bold: true,
         fontSize: 11,
@@ -169,7 +170,6 @@ class AttendanceExportService {
         verticalAlign: VerticalAlign.Center,
       );
 
-  // Row 4: table header (bold, 11, centered, thin borders).
   CellStyle get _headerStyle => CellStyle(
         bold: true,
         fontSize: 11,
@@ -181,7 +181,6 @@ class AttendanceExportService {
         bottomBorder: Border(borderStyle: BorderStyle.Thin),
       );
 
-  // Data rows (size 10, centered, thin borders).
   CellStyle get _dataStyle => CellStyle(
         fontSize: 10,
         horizontalAlign: HorizontalAlign.Center,
@@ -198,12 +197,14 @@ class AttendanceExportService {
     required String course,
     Map<String, bool> editedMarks = const {},
   }) async {
+    // Course is stored in UPPERCASE in live_sessions.
+    final courseKey = course.trim().toUpperCase();
+
     final students = await _getStudents(branch, year);
-    final sessions = await _getSessions(branch, year, course);
+    final sessions = await _getSessions(branch, year, courseKey);
 
     final excel = Excel.createExcel();
 
-    // One workbook with 12 month sheets only.
     for (final month in months) {
       final sheet = excel[month];
 
@@ -225,7 +226,7 @@ class AttendanceExportService {
 
       final lastColumn = headers.length - 1;
 
-      // Row 1: title merged across the whole table width.
+      // Row 1: title.
       sheet.merge(
         CellIndex.indexByColumnRow(columnIndex: 0, rowIndex: 0),
         CellIndex.indexByColumnRow(columnIndex: lastColumn, rowIndex: 0),
@@ -237,7 +238,7 @@ class AttendanceExportService {
       titleCell.value = TextCellValue('ATTENDANCE REGISTER - $month');
       titleCell.cellStyle = _titleStyle;
 
-      // Row 2: branch / year / course merged across the whole table width.
+      // Row 2: branch / year / course.
       sheet.merge(
         CellIndex.indexByColumnRow(columnIndex: 0, rowIndex: 1),
         CellIndex.indexByColumnRow(columnIndex: lastColumn, rowIndex: 1),
@@ -247,11 +248,11 @@ class AttendanceExportService {
         CellIndex.indexByColumnRow(columnIndex: 0, rowIndex: 1),
       );
       subTitleCell.value = TextCellValue(
-        'Branch: $branch    Year: $year    Course: $course',
+        'Branch: $branch    Year: $year    Course: $courseKey',
       );
       subTitleCell.cellStyle = _subTitleStyle;
 
-      // Row 3 stays blank (as in the template).
+      // Row 3 stays blank.
 
       // Row 4: column headings.
       for (int col = 0; col < headers.length; col++) {
@@ -336,7 +337,7 @@ class AttendanceExportService {
     final directory = await getApplicationDocumentsDirectory();
 
     final filePath =
-        '${directory.path}/APEX_Attendance_${branch}_${displayYear.replaceAll(' ', '_')}_${course.replaceAll(' ', '_')}.xlsx';
+        '${directory.path}/APEX_Attendance_${branch}_${displayYear.replaceAll(' ', '_')}_${courseKey.replaceAll(' ', '_')}.xlsx';
 
     final bytes = excel.encode();
 
