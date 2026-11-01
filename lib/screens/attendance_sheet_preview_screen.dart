@@ -23,230 +23,114 @@ class AttendanceSheetPreview extends StatefulWidget {
 
 class _AttendanceSheetPreviewState
     extends State<AttendanceSheetPreview> {
-  // ============================================================
-  // COLOURS
-  // ============================================================
-
   static const Color primaryNavy = Color(0xFF073B6F);
   static const Color darkNavy = Color(0xFF052B52);
   static const Color primaryBlue = Color(0xFF0B6EAA);
   static const Color cyan = Color(0xFF18A8C8);
   static const Color successGreen = Color(0xFF159957);
   static const Color warningOrange = Color(0xFFF39A23);
+  static const Color background = Color(0xFFF5F8FC);
 
   final FirebaseFirestore _firestore =
       FirebaseFirestore.instance;
 
-  // ============================================================
-  // DATA
-  // ============================================================
-
-  bool isLoading = true;
-  String? errorMessage;
+  final AttendanceExportService _exportService =
+      AttendanceExportService();
 
   List<Map<String, dynamic>> students = [];
   List<Map<String, dynamic>> sessions = [];
-  final Map<String, String> editedMarks = {};
+
+  // Key format: sessionId::studentId
+  final Map<String, bool> editedMarks = {};
+
+  bool isLoading = true;
+  bool isSaving = false;
   bool isDownloading = false;
+  bool isExporting = false;
 
-  String _markKey(String sessionId, String studentId) => '$sessionId::$studentId';
-
-  Future<void> _editAttendanceMark(String sessionId, String studentId, String current) async {
-    final selected = await showDialog<String>(
-      context: context,
-      builder: (dialogContext) => AlertDialog(
-        title: const Text('Edit attendance'),
-        content: const Text('Select the attendance status for this student.'),
-        actions: [
-          TextButton(onPressed: () => Navigator.pop(dialogContext, 'P'), child: const Text('Present (P)')),
-          TextButton(onPressed: () => Navigator.pop(dialogContext, 'A'), child: const Text('Absent (A)')),
-          TextButton(onPressed: () => Navigator.pop(dialogContext), child: const Text('Cancel')),
-        ],
-      ),
-    );
-    if (selected != null && mounted) {
-      setState(() => editedMarks[_markKey(sessionId, studentId)] = selected);
-    }
-  }
-
-  Future<void> _downloadEditedSheet() async {
-    if (isDownloading) return;
-    setState(() => isDownloading = true);
-    try {
-      final path = await AttendanceExportService().downloadAttendanceExcel(
-        branch: widget.branch, year: widget.year, course: widget.course,
-        month: widget.month, editedMarks: editedMarks,
-      );
-      if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-        content: Text(path == null ? 'Save cancelled.' : 'Excel workbook saved: $path'),
-      ));
-    } catch (e) {
-      if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Download failed: $e')));
-    } finally { if (mounted) setState(() => isDownloading = false); }
-  }
-
-  // ============================================================
-  // MONTH NUMBER
-  // ============================================================
-
-  int _monthNumber(String month) {
-    const months = {
-      'January': 1,
-      'February': 2,
-      'March': 3,
-      'April': 4,
-      'May': 5,
-      'June': 6,
-      'July': 7,
-      'August': 8,
-      'September': 9,
-      'October': 10,
-      'November': 11,
-      'December': 12,
-    };
-
-    return months[month] ?? 0;
-  }
-
-  // ============================================================
-  // LOAD DATA
-  // ============================================================
+  String? generatedFilePath;
 
   @override
   void initState() {
     super.initState();
-    _loadPreview();
+    _loadAttendance();
   }
 
-  Future<void> _loadPreview() async {
-    setState(() {
-      isLoading = true;
-      errorMessage = null;
-    });
+  DateTime? _getDate(dynamic value) {
+    if (value is Timestamp) return value.toDate();
+    if (value is DateTime) return value;
+    return null;
+  }
 
+  bool _isPresent(dynamic value) {
+    if (value == true) return true;
+    if (value == false || value == null) return false;
+
+    final status = value.toString().toLowerCase().trim();
+
+    return status == 'present' ||
+        status == 'p' ||
+        status == 'true';
+  }
+
+  Future<void> _loadAttendance() async {
     try {
-      // --------------------------------------------------------
-      // STUDENTS
-      // --------------------------------------------------------
+      setState(() {
+        isLoading = true;
+      });
 
-      final studentsSnapshot = await _firestore
+      final studentSnapshot = await _firestore
           .collection('users')
-          .where(
-            'role',
-            isEqualTo: 'student',
-          )
-          .where(
-            'branch',
-            isEqualTo: widget.branch,
-          )
-          .where(
-            'year',
-            isEqualTo: widget.year,
-          )
+          .where('role', isEqualTo: 'student')
+          .where('branch', isEqualTo: widget.branch)
+          .where('year', isEqualTo: widget.year)
           .get();
 
       final loadedStudents =
-          studentsSnapshot.docs.map((doc) {
+          studentSnapshot.docs.map((doc) {
         final data = doc.data();
 
         return {
           'id': doc.id,
-          ...data,
+          'name': data['name'] ?? '',
+          'rollNo': data['rollNo'] ?? '',
         };
       }).toList();
 
-      // --------------------------------------------------------
-      // SORT STUDENTS
-      // --------------------------------------------------------
-
       loadedStudents.sort((a, b) {
-        final rollA =
-            (a['rollNo'] ?? a['rollNumber'] ?? '').toString();
-
-        final rollB =
-            (b['rollNo'] ?? b['rollNumber'] ?? '').toString();
-
-        final numberA =
-            int.tryParse(rollA);
-
-        final numberB =
-            int.tryParse(rollB);
-
-        if (numberA != null &&
-            numberB != null) {
-          return numberA.compareTo(numberB);
-        }
-
-        return rollA.compareTo(rollB);
+        return a['rollNo']
+            .toString()
+            .compareTo(b['rollNo'].toString());
       });
 
-      // --------------------------------------------------------
-      // SESSIONS
-      // --------------------------------------------------------
-
-      final sessionsSnapshot = await _firestore
+      final sessionSnapshot = await _firestore
           .collection('live_sessions')
-          .where(
-            'branch',
-            isEqualTo: widget.branch,
-          )
-          .where(
-            'year',
-            isEqualTo: widget.year,
-          )
-          .where(
-            'course',
-            isEqualTo: widget.course.trim().toUpperCase(),
-          )
-          .where(
-            'status',
-            isEqualTo: 'ended',
-          )
+          .where('branch', isEqualTo: widget.branch)
+          .where('year', isEqualTo: widget.year)
+          .where('course', isEqualTo: widget.course)
+          .where('status', isEqualTo: 'ended')
           .get();
 
-      final monthNumber =
-          _monthNumber(widget.month);
+      final monthNumber = _monthNumber(widget.month);
 
-      final loadedSessions = <Map<String, dynamic>>[];
-
-      for (final doc in sessionsSnapshot.docs) {
+      final loadedSessions =
+          sessionSnapshot.docs.map((doc) {
         final data = doc.data();
 
-        final createdAt =
-            data['createdAt'];
-
-        if (createdAt is! Timestamp) {
-          continue;
-        }
-
-        final date =
-            createdAt.toDate();
-
-        if (date.month != monthNumber) {
-          continue;
-        }
-
-        loadedSessions.add({
+        return {
           'id': doc.id,
-          ...data,
-        });
-      }
+          'date': _getDate(data['createdAt']),
+        };
+      }).where((session) {
+        final date = session['date'] as DateTime?;
 
-      // --------------------------------------------------------
-      // SORT SESSIONS BY DATE
-      // --------------------------------------------------------
+        return date != null &&
+            date.month == monthNumber;
+      }).toList();
 
       loadedSessions.sort((a, b) {
-        final dateA =
-            a['createdAt'] as Timestamp;
-
-        final dateB =
-            b['createdAt'] as Timestamp;
-
-        return dateA
-            .toDate()
-            .compareTo(dateB.toDate());
+        return (a['date'] as DateTime)
+            .compareTo(b['date'] as DateTime);
       });
 
       if (!mounted) return;
@@ -256,788 +140,694 @@ class _AttendanceSheetPreviewState
         sessions = loadedSessions;
         isLoading = false;
       });
+
+      // Generate the annual workbook once for this preview.
+      await _generateWorkbook();
     } catch (e) {
       if (!mounted) return;
 
       setState(() {
         isLoading = false;
-        errorMessage =
-            'Unable to load attendance preview.\n$e';
       });
+
+      _showMessage('Unable to load attendance: $e');
     }
   }
 
-  // ============================================================
-  // ATTENDANCE FOR STUDENT
-  // ============================================================
+  int _monthNumber(String month) {
+    const monthNames = [
+      'January',
+      'February',
+      'March',
+      'April',
+      'May',
+      'June',
+      'July',
+      'August',
+      'September',
+      'October',
+      'November',
+      'December',
+    ];
 
-  Future<String> _getAttendanceMark(
+    final index = monthNames.indexOf(month);
+
+    return index == -1 ? DateTime.now().month : index + 1;
+  }
+
+  Future<bool> _getMark(
     String sessionId,
     String studentId,
   ) async {
+    final key = '$sessionId::$studentId';
+
+    if (editedMarks.containsKey(key)) {
+      return editedMarks[key]!;
+    }
+
+    final doc = await _firestore
+        .collection('attendance')
+        .doc(sessionId)
+        .collection('students')
+        .doc(studentId)
+        .get();
+
+    if (!doc.exists) return false;
+
+    final data = doc.data() ?? {};
+
+    return _isPresent(data['status']);
+  }
+
+  Future<void> _generateWorkbook() async {
     try {
-      final doc = await _firestore
-          .collection('attendance')
-          .doc(sessionId)
-          .collection('students')
-          .doc(studentId)
-          .get();
+      generatedFilePath =
+          await _exportService.generateAnnualWorkbook(
+        branch: widget.branch,
+        year: widget.year,
+        course: widget.course,
+        editedMarks: editedMarks,
+      );
 
-      if (!doc.exists) {
-        return 'A';
+      if (mounted) {
+        setState(() {});
       }
-
-      final data = doc.data();
-
-      final status = data?['status'];
-      if (status == 'Present' || status == 'present' || status == 'P' || status == true) {
-        return 'P';
-      }
-
-      return 'A';
     } catch (e) {
-      // Do not silently turn a Firestore/network error into an Absent mark.
-      rethrow;
+      _showMessage('Workbook generation failed: $e');
     }
   }
 
-  // ============================================================
-  // STUDENT ROW
-  // ============================================================
+  Future<void> _updateWorkbook() async {
+    if (!mounted) return;
 
-  Widget _buildStudentRow(
-    int index,
-    Map<String, dynamic> student,
-  ) {
-    final studentId =
-        student['id'].toString();
+    setState(() {
+      isSaving = true;
+    });
 
-    final rollNo =
-        (student['rollNo'] ?? student['rollNumber'] ?? '').toString();
+    try {
+      // Overwrites the existing workbook at the same path.
+      generatedFilePath =
+          await _exportService.generateAnnualWorkbook(
+        branch: widget.branch,
+        year: widget.year,
+        course: widget.course,
+        editedMarks: editedMarks,
+      );
 
-    final name =
-        (student['name'] ?? student['displayName'] ?? student['fullName'] ?? '').toString();
+      if (!mounted) return;
 
-    return FutureBuilder<List<String>>(
-      future: Future.wait(
-        sessions.map(
-          (session) => _getAttendanceMark(
-            session['id'].toString(),
-            studentId,
-          ),
-        ),
-      ),
-      builder: (
-        context,
-        snapshot,
-      ) {
-        if (snapshot.hasError) {
-          return _buildLoadingRow(index, rollNo, 'Attendance read error');
-        }
-        if (!snapshot.hasData) {
-          return _buildLoadingRow(
-            index,
-            rollNo,
-            name,
-          );
-        }
-
-        final marks = List<String>.generate(snapshot.data!.length, (i) {
-          final sessionId = sessions[i]['id'].toString();
-          return editedMarks[_markKey(sessionId, studentId)] ?? snapshot.data![i];
+      _showMessage('Attendance changes saved successfully.');
+    } catch (e) {
+      if (mounted) {
+        _showMessage('Unable to save changes: $e');
+      }
+    } finally {
+      if (mounted) {
+        setState(() {
+          isSaving = false;
         });
+      }
+    }
+  }
 
-        int present = 0;
-        int absent = 0;
-
-        for (final mark in marks) {
-          if (mark == 'P') {
-            present++;
-          } else {
-            absent++;
-          }
-        }
-
-        final total = marks.length;
-
-        final percentage = total == 0
-            ? 0.0
-            : (present / total) * 100;
-
-        final detained =
-            total > 0 && percentage < 75;
-
-        return Container(
-          decoration: BoxDecoration(
-            color: index.isEven
-                ? Colors.white
-                : const Color(0xFFF8FAFC),
-            border: Border(
-              bottom: BorderSide(
-                color: Colors.grey.shade200,
-              ),
+  Future<void> _editAttendance(
+    String sessionId,
+    String studentId,
+    bool currentValue,
+  ) async {
+    final result = await showDialog<bool>(
+      context: context,
+      builder: (context) {
+        return AlertDialog(
+          title: const Text('Edit Attendance'),
+          content: const Text(
+            'Select the attendance status.',
+          ),
+          actions: [
+            TextButton(
+              onPressed: () {
+                Navigator.pop(context, false);
+              },
+              child: const Text('Absent'),
             ),
-          ),
-          child: Row(
-            children: [
-              _cell(
-                '${index + 1}',
-                width: 55,
-                center: true,
-              ),
-
-              _cell(
-                rollNo,
-                width: 75,
-                center: true,
-              ),
-
-              _cell(
-                name,
-                width: 180,
-              ),
-
-              ...List.generate(
-                marks.length,
-                (i) {
-                  final sessionId = sessions[i]['id'].toString();
-                  return _attendanceCell(
-                    marks[i],
-                    onTap: () => _editAttendanceMark(sessionId, studentId, marks[i]),
-                  );
-                },
-              ),
-
-              _cell(
-                '$present',
-                width: 75,
-                center: true,
-              ),
-
-              _cell(
-                '$absent',
-                width: 75,
-                center: true,
-              ),
-
-              _cell(
-                percentage.toStringAsFixed(1),
-                width: 100,
-                center: true,
-              ),
-
-              SizedBox(
-                width: 95,
-                child: Center(
-                  child: Container(
-                    padding:
-                        const EdgeInsets.symmetric(
-                      horizontal: 8,
-                      vertical: 5,
-                    ),
-                    decoration: BoxDecoration(
-                      color: detained
-                          ? warningOrange
-                              .withValues(alpha: 0.12)
-                          : successGreen
-                              .withValues(alpha: 0.12),
-                      borderRadius:
-                          BorderRadius.circular(8),
-                    ),
-                    child: Text(
-                      total == 0 ? 'No Classes' : (detained ? 'Detained' : 'Regular'),
-                      style: TextStyle(
-                        color: detained
-                            ? warningOrange
-                            : successGreen,
-                        fontWeight:
-                            FontWeight.bold,
-                        fontSize: 11,
-                      ),
-                    ),
-                  ),
-                ),
-              ),
-            ],
-          ),
+            ElevatedButton(
+              onPressed: () {
+                Navigator.pop(context, true);
+              },
+              child: const Text('Present'),
+            ),
+          ],
         );
       },
     );
+
+    if (result == null || result == currentValue) return;
+
+    final key = '$sessionId::$studentId';
+
+    setState(() {
+      editedMarks[key] = result;
+    });
+
+    await _updateWorkbook();
   }
 
-  // ============================================================
-  // LOADING ROW
-  // ============================================================
+  Future<void> _downloadWorkbook() async {
+    if (generatedFilePath == null || isDownloading) return;
 
-  Widget _buildLoadingRow(
-    int index,
-    String rollNo,
-    String name,
-  ) {
-    return Container(
-      height: 55,
-      color: index.isEven
-          ? Colors.white
-          : const Color(0xFFF8FAFC),
-      child: Row(
-        children: [
-          _cell(
-            '${index + 1}',
-            width: 55,
-            center: true,
-          ),
-          _cell(
-            rollNo,
-            width: 75,
-            center: true,
-          ),
-          _cell(
-            name,
-            width: 180,
-          ),
-          ...List.generate(
-            sessions.length,
-            (_) => _cell(
-              '...',
-              width: 55,
-              center: true,
-            ),
-          ),
-          _cell(
-            '...',
-            width: 75,
-            center: true,
-          ),
-          _cell(
-            '...',
-            width: 75,
-            center: true,
-          ),
-          _cell(
-            '...',
-            width: 100,
-            center: true,
-          ),
-          _cell(
-            '...',
-            width: 95,
-            center: true,
-          ),
-        ],
+    setState(() {
+      isDownloading = true;
+    });
+
+    try {
+      await _updateWorkbook();
+
+      if (generatedFilePath != null) {
+        await _exportService.downloadWorkbook(
+          generatedFilePath!,
+        );
+      }
+    } catch (e) {
+      _showMessage('Download failed: $e');
+    } finally {
+      if (mounted) {
+        setState(() {
+          isDownloading = false;
+        });
+      }
+    }
+  }
+
+  Future<void> _exportWorkbook() async {
+    if (generatedFilePath == null || isExporting) return;
+
+    setState(() {
+      isExporting = true;
+    });
+
+    try {
+      await _updateWorkbook();
+
+      if (generatedFilePath != null) {
+        await _exportService.shareWorkbook(
+          generatedFilePath!,
+        );
+      }
+    } catch (e) {
+      _showMessage('Export failed: $e');
+    } finally {
+      if (mounted) {
+        setState(() {
+          isExporting = false;
+        });
+      }
+    }
+  }
+
+  void _showMessage(String message) {
+    if (!mounted) return;
+
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(message),
+        behavior: SnackBarBehavior.floating,
       ),
     );
   }
 
-  // ============================================================
-  // NORMAL CELL
-  // ============================================================
-
-  Widget _cell(
+  Widget _buildHeaderCell(
     String text, {
-    required double width,
-    bool center = false,
-  }) {
-    return SizedBox(
-      width: width,
-      height: 55,
-      child: Container(
-        alignment: center
-            ? Alignment.center
-            : Alignment.centerLeft,
-        padding:
-            const EdgeInsets.symmetric(
-          horizontal: 8,
-        ),
-        child: Text(
-          text,
-          maxLines: 2,
-          overflow: TextOverflow.ellipsis,
-          textAlign: center
-              ? TextAlign.center
-              : TextAlign.left,
-          style: const TextStyle(
-            fontSize: 12,
-            color: darkNavy,
-          ),
-        ),
-      ),
-    );
-  }
-
-  // ============================================================
-  // ATTENDANCE CELL
-  // ============================================================
-
-  Widget _attendanceCell(
-    String mark, {VoidCallback? onTap}
-  ) {
-    final present = mark == 'P';
-
-    return SizedBox(
-      width: 55,
-      height: 55,
-      child: InkWell(
-        onTap: onTap,
-        child: Center(
-        child: Container(
-          width: 28,
-          height: 28,
-          alignment: Alignment.center,
-          decoration: BoxDecoration(
-            color: present
-                ? successGreen.withValues(
-                    alpha: 0.12,
-                  )
-                : Colors.red.withValues(
-                    alpha: 0.10,
-                  ),
-            borderRadius:
-                BorderRadius.circular(7),
-          ),
-          child: Text(
-            mark,
-            style: TextStyle(
-              fontWeight: FontWeight.bold,
-              fontSize: 12,
-              color: present
-                  ? successGreen
-                  : Colors.red.shade700,
-            ),
-          ),
-        ),
-      ),
-      ),
-    );
-  }
-
-  // ============================================================
-  // HEADER CELL
-  // ============================================================
-
-  Widget _headerCell(
-    String text, {
-    required double width,
+    double width = 110,
   }) {
     return Container(
       width: width,
-      height: 60,
+      height: 52,
       alignment: Alignment.center,
-      padding:
-          const EdgeInsets.symmetric(
-        horizontal: 6,
-      ),
+      padding: const EdgeInsets.all(8),
       decoration: const BoxDecoration(
         color: primaryNavy,
       ),
       child: Text(
         text,
         textAlign: TextAlign.center,
-        maxLines: 2,
-        overflow: TextOverflow.ellipsis,
         style: const TextStyle(
           color: Colors.white,
-          fontSize: 11,
           fontWeight: FontWeight.bold,
+          fontSize: 12,
         ),
       ),
     );
   }
 
-  // ============================================================
-  // TABLE
-  // ============================================================
-
-  Widget _buildTable() {
-    return SingleChildScrollView(
-      scrollDirection: Axis.horizontal,
-      child: Column(
-        crossAxisAlignment:
-            CrossAxisAlignment.start,
-        children: [
-          // ------------------------------------------------------
-          // HEADER
-          // ------------------------------------------------------
-
-          Row(
-            children: [
-              _headerCell(
-                'Sr No',
-                width: 55,
-              ),
-              _headerCell(
-                'Roll No',
-                width: 75,
-              ),
-              _headerCell(
-                'Student Name',
-                width: 180,
-              ),
-
-              ...sessions.map(
-                (session) {
-                  final timestamp =
-                      session['createdAt']
-                          as Timestamp;
-
-                  final date =
-                      timestamp.toDate();
-
-                  final formatted =
-                      '${date.day.toString().padLeft(2, '0')}-'
-                      '${date.month.toString().padLeft(2, '0')}';
-
-                  return _headerCell(
-                    formatted,
-                    width: 55,
-                  );
-                },
-              ),
-
-              _headerCell(
-                'Present',
-                width: 75,
-              ),
-
-              _headerCell(
-                'Absent',
-                width: 75,
-              ),
-
-              _headerCell(
-                'Attendance %',
-                width: 100,
-              ),
-
-              _headerCell(
-                'Status',
-                width: 95,
-              ),
-            ],
-          ),
-
-          // ------------------------------------------------------
-          // DATA
-          // ------------------------------------------------------
-
-          ...List.generate(
-            students.length,
-            (index) {
-              return _buildStudentRow(
-                index,
-                students[index],
-              );
-            },
-          ),
-        ],
-      ),
-    );
-  }
-
-  // ============================================================
-  // SUMMARY BAR
-  // ============================================================
-
-  Widget _buildSummaryBar() {
+  Widget _buildTextCell(
+    String text, {
+    double width = 110,
+  }) {
     return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.all(16),
+      width: width,
+      height: 55,
+      alignment: Alignment.center,
+      padding: const EdgeInsets.all(8),
       decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius:
-            BorderRadius.circular(16),
+        border: Border.all(
+          color: Colors.grey.shade300,
+          width: 0.5,
+        ),
       ),
-      child: Row(
-        children: [
-          _summaryItem(
-            'Students',
-            '${students.length}',
-            primaryBlue,
-          ),
-          _summaryItem(
-            'Classes',
-            '${sessions.length}',
-            cyan,
-          ),
-          _summaryItem(
-            'Threshold',
-            '75%',
-            warningOrange,
-          ),
-        ],
+      child: Text(
+        text,
+        textAlign: TextAlign.center,
+        style: const TextStyle(
+          fontSize: 12,
+          fontWeight: FontWeight.w500,
+        ),
       ),
     );
   }
 
-  Widget _summaryItem(
-    String title,
-    String value,
-    Color color,
+  Widget _buildAttendanceCell(
+    String sessionId,
+    String studentId,
+    bool isPresent,
   ) {
-    return Expanded(
-      child: Column(
-        children: [
-          Text(
-            value,
+    return InkWell(
+      onTap: isSaving
+          ? null
+          : () => _editAttendance(
+                sessionId,
+                studentId,
+                isPresent,
+              ),
+      child: Container(
+        width: 65,
+        height: 55,
+        alignment: Alignment.center,
+        decoration: BoxDecoration(
+          border: Border.all(
+            color: Colors.grey.shade300,
+            width: 0.5,
+          ),
+        ),
+        child: Container(
+          padding: const EdgeInsets.symmetric(
+            horizontal: 10,
+            vertical: 6,
+          ),
+          decoration: BoxDecoration(
+            color: isPresent
+                ? successGreen.withOpacity(0.12)
+                : Colors.red.withOpacity(0.10),
+            borderRadius: BorderRadius.circular(6),
+          ),
+          child: Text(
+            isPresent ? 'P' : 'A',
             style: TextStyle(
-              fontSize: 20,
               fontWeight: FontWeight.bold,
-              color: color,
+              color: isPresent
+                  ? successGreen
+                  : Colors.red,
             ),
           ),
-          const SizedBox(height: 3),
-          Text(
-            title,
-            style: const TextStyle(
-              fontSize: 11,
-              color: Colors.grey,
-            ),
-          ),
-        ],
+        ),
       ),
     );
   }
 
-  // ============================================================
-  // ERROR VIEW
-  // ============================================================
+  Widget _buildStudentRow(
+    Map<String, dynamic> student,
+    int index,
+  ) {
+    final studentId = student['id'].toString();
 
-  Widget _buildError() {
-    return Center(
-      child: Padding(
-        padding: const EdgeInsets.all(25),
-        child: Column(
-          mainAxisAlignment:
-              MainAxisAlignment.center,
+    return FutureBuilder<List<bool>>(
+      future: Future.wait(
+        sessions.map((session) {
+          return _getMark(
+            session['id'].toString(),
+            studentId,
+          );
+        }),
+      ),
+      builder: (context, snapshot) {
+        if (!snapshot.hasData) {
+          return Container(
+            height: 55,
+            alignment: Alignment.center,
+            child: const CircularProgressIndicator(
+              strokeWidth: 2,
+            ),
+          );
+        }
+
+        final marks = snapshot.data!;
+
+        final present = marks.where((mark) => mark).length;
+        final absent = marks.length - present;
+
+        final percentage = marks.isEmpty
+            ? 0.0
+            : (present / marks.length) * 100;
+
+        final status = percentage >= 75
+            ? 'Eligible'
+            : 'Detained';
+
+        return Row(
           children: [
-            const Icon(
-              Icons.error_outline,
-              color: Colors.red,
-              size: 55,
+            _buildTextCell('${index + 1}', width: 60),
+            _buildTextCell(
+              student['name'].toString(),
+              width: 180,
             ),
-            const SizedBox(height: 15),
-            const Text(
-              'Unable to load preview',
-              style: TextStyle(
-                fontSize: 18,
-                fontWeight: FontWeight.bold,
-                color: darkNavy,
-              ),
+            _buildTextCell(
+              student['rollNo'].toString(),
+              width: 100,
             ),
-            const SizedBox(height: 8),
-            Text(
-              errorMessage ?? 'Unknown error',
-              textAlign: TextAlign.center,
-              style: const TextStyle(
-                color: Colors.grey,
-                fontSize: 12,
-              ),
+            ...List.generate(marks.length, (i) {
+              return _buildAttendanceCell(
+                sessions[i]['id'].toString(),
+                studentId,
+                marks[i],
+              );
+            }),
+            _buildTextCell(
+              present.toString(),
+              width: 80,
             ),
-            const SizedBox(height: 18),
-            ElevatedButton.icon(
-              onPressed: _loadPreview,
-              icon: const Icon(
-                Icons.refresh,
+            _buildTextCell(
+              absent.toString(),
+              width: 80,
+            ),
+            _buildTextCell(
+              '${percentage.toStringAsFixed(1)}%',
+              width: 100,
+            ),
+            Container(
+              width: 110,
+              height: 55,
+              alignment: Alignment.center,
+              decoration: BoxDecoration(
+                border: Border.all(
+                  color: Colors.grey.shade300,
+                  width: 0.5,
+                ),
               ),
-              label: const Text(
-                'Retry',
-              ),
-              style:
-                  ElevatedButton.styleFrom(
-                backgroundColor: primaryBlue,
-                foregroundColor: Colors.white,
+              child: Text(
+                status,
+                style: TextStyle(
+                  fontSize: 11,
+                  fontWeight: FontWeight.bold,
+                  color: percentage >= 75
+                      ? successGreen
+                      : Colors.red,
+                ),
               ),
             ),
           ],
+        );
+      },
+    );
+  }
+
+  Widget _buildTable() {
+    if (students.isEmpty) {
+      return const Center(
+        child: Text('No students found.'),
+      );
+    }
+
+    if (sessions.isEmpty) {
+      return const Center(
+        child: Text(
+          'No attendance sessions found for this month.',
+        ),
+      );
+    }
+
+    return Scrollbar(
+      thumbVisibility: true,
+      child: SingleChildScrollView(
+        scrollDirection: Axis.horizontal,
+        child: SizedBox(
+          width: 60 +
+              180 +
+              100 +
+              (sessions.length * 65) +
+              80 +
+              80 +
+              100 +
+              110,
+          child: Column(
+            children: [
+              Row(
+                children: [
+                  _buildHeaderCell('Sr No', width: 60),
+                  _buildHeaderCell(
+                    'Student Name',
+                    width: 180,
+                  ),
+                  _buildHeaderCell('Roll No', width: 100),
+                  ...sessions.map((session) {
+                    final date =
+                        session['date'] as DateTime;
+
+                    return _buildHeaderCell(
+                      '${date.day}/${date.month}',
+                      width: 65,
+                    );
+                  }),
+                  _buildHeaderCell(
+                    'Present',
+                    width: 80,
+                  ),
+                  _buildHeaderCell(
+                    'Absent',
+                    width: 80,
+                  ),
+                  _buildHeaderCell(
+                    'Attendance %',
+                    width: 100,
+                  ),
+                  _buildHeaderCell(
+                    'Status',
+                    width: 110,
+                  ),
+                ],
+              ),
+              Expanded(
+                child: ListView.builder(
+                  itemCount: students.length,
+                  itemBuilder: (context, index) {
+                    return _buildStudentRow(
+                      students[index],
+                      index,
+                    );
+                  },
+                ),
+              ),
+            ],
+          ),
         ),
       ),
     );
   }
 
-  // ============================================================
-  // BUILD
-  // ============================================================
+  Widget _buildActionButton({
+    required String label,
+    required IconData icon,
+    required VoidCallback? onPressed,
+    required Color color,
+    bool loading = false,
+  }) {
+    return Expanded(
+      child: ElevatedButton.icon(
+        onPressed: loading ? null : onPressed,
+        icon: loading
+            ? const SizedBox(
+                width: 17,
+                height: 17,
+                child: CircularProgressIndicator(
+                  strokeWidth: 2,
+                  color: Colors.white,
+                ),
+              )
+            : Icon(icon, size: 19),
+        label: Text(label),
+        style: ElevatedButton.styleFrom(
+          backgroundColor: color,
+          foregroundColor: Colors.white,
+          padding: const EdgeInsets.symmetric(
+            vertical: 14,
+            horizontal: 8,
+          ),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(10),
+          ),
+        ),
+      ),
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor:
-          const Color(0xFFF4F7FA),
-
+      backgroundColor: background,
       appBar: AppBar(
-        backgroundColor: primaryNavy,
-        foregroundColor: Colors.white,
-        elevation: 0,
         title: const Text(
-          'Editable Attendance Sheet Preview',
+          'Attendance Preview',
           style: TextStyle(
             fontWeight: FontWeight.bold,
           ),
         ),
+        backgroundColor: primaryNavy,
+        foregroundColor: Colors.white,
         actions: [
           IconButton(
-            onPressed: isLoading || isDownloading ? null : _downloadEditedSheet,
-            icon: isDownloading ? const SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white)) : const Icon(Icons.download),
-            tooltip: 'Download editable Excel workbook',
-          ),
-          IconButton(
-            onPressed:
-                isLoading ? null : _loadPreview,
-            icon: const Icon(
-              Icons.refresh,
-            ),
             tooltip: 'Refresh',
+            onPressed: isLoading ? null : _loadAttendance,
+            icon: const Icon(Icons.refresh),
           ),
         ],
       ),
-
       body: isLoading
           ? const Center(
-              child:
-                  CircularProgressIndicator(
+              child: CircularProgressIndicator(
                 color: primaryBlue,
               ),
             )
-          : errorMessage != null
-              ? _buildError()
-              : Column(
-                  children: [
-                    // ------------------------------------------
-                    // REPORT INFORMATION
-                    // ------------------------------------------
-
-                    Padding(
-                      padding:
-                          const EdgeInsets.all(
-                        16,
-                      ),
-                      child: Column(
-                        children: [
-                          Container(
-                            width: double.infinity,
-                            padding:
-                                const EdgeInsets.all(
-                              18,
-                            ),
-                            decoration:
-                                BoxDecoration(
-                              gradient:
-                                  const LinearGradient(
-                                colors: [
-                                  darkNavy,
-                                  primaryNavy,
-                                  primaryBlue,
-                                ],
-                              ),
-                              borderRadius:
-                                  BorderRadius.circular(
-                                16,
-                              ),
-                            ),
-                            child: Column(
-                              crossAxisAlignment:
-                                  CrossAxisAlignment
-                                      .start,
-                              children: [
-                                const Text(
-                                  'Attendance Report',
-                                  style:
-                                      TextStyle(
-                                    color:
-                                        Colors.white,
-                                    fontSize: 20,
-                                    fontWeight:
-                                        FontWeight
-                                            .bold,
-                                  ),
-                                ),
-                                const SizedBox(
-                                  height: 10,
-                                ),
-                                Text(
-                                  '${widget.branch} • '
-                                  '${widget.year} Year • '
-                                  '${widget.course} • '
-                                  '${widget.month}',
-                                  style:
-                                      const TextStyle(
-                                    color:
-                                        Colors.white70,
-                                    fontSize: 13,
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-
-                          const SizedBox(
-                            height: 12,
-                          ),
-
-                          _buildSummaryBar(),
-                          const SizedBox(height: 8),
-                          const Text('Tap any P/A cell to edit attendance. Changes are included in the downloaded Excel workbook.', style: TextStyle(fontSize: 11, color: Colors.black54)),
-                        ],
-                      ),
+          : Column(
+              children: [
+                Container(
+                  width: double.infinity,
+                  margin: const EdgeInsets.all(12),
+                  padding: const EdgeInsets.all(16),
+                  decoration: BoxDecoration(
+                    gradient: const LinearGradient(
+                      colors: [
+                        primaryNavy,
+                        primaryBlue,
+                        cyan,
+                      ],
                     ),
-
-                    // ------------------------------------------
-                    // TABLE
-                    // ------------------------------------------
-
-                    Expanded(
-                      child: Container(
-                        margin:
-                            const EdgeInsets
-                                .fromLTRB(
-                          16,
-                          0,
-                          16,
-                          16,
-                        ),
-                        decoration:
-                            BoxDecoration(
+                    borderRadius: BorderRadius.circular(14),
+                  ),
+                  child: Column(
+                    crossAxisAlignment:
+                        CrossAxisAlignment.start,
+                    children: [
+                      const Text(
+                        'APEX ATTENDANCE REPORT',
+                        style: TextStyle(
                           color: Colors.white,
-                          borderRadius:
-                              BorderRadius.circular(
-                            14,
-                          ),
-                          boxShadow: [
-                            BoxShadow(
-                              color: Colors.black
-                                  .withValues(
-                                alpha: 0.05,
-                              ),
-                              blurRadius: 10,
-                              offset:
-                                  const Offset(
-                                0,
-                                3,
-                              ),
-                            ),
-                          ],
-                        ),
-                        child: ClipRRect(
-                          borderRadius:
-                              BorderRadius.circular(
-                            14,
-                          ),
-                          child: students.isEmpty
-                              ? const Center(
-                                  child: Text(
-                                    'No students found for the selected class.',
-                                    style:
-                                        TextStyle(
-                                      color:
-                                          Colors.grey,
-                                    ),
-                                  ),
-                                )
-                              : _buildTable(),
+                          fontWeight: FontWeight.bold,
+                          fontSize: 17,
                         ),
                       ),
-                    ),
-                  ],
+                      const SizedBox(height: 10),
+                      Text(
+                        'Branch: ${widget.branch}   |   Year: ${widget.year}',
+                        style: const TextStyle(
+                          color: Colors.white,
+                        ),
+                      ),
+                      const SizedBox(height: 5),
+                      Text(
+                        'Course: ${widget.course}',
+                        style: const TextStyle(
+                          color: Colors.white,
+                        ),
+                      ),
+                      const SizedBox(height: 5),
+                      Text(
+                        'Month: ${widget.month}',
+                        style: const TextStyle(
+                          color: Colors.white,
+                        ),
+                      ),
+                    ],
+                  ),
                 ),
+
+                Padding(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 12,
+                  ),
+                  child: Row(
+                    children: [
+                      const Icon(
+                        Icons.info_outline,
+                        color: primaryBlue,
+                        size: 18,
+                      ),
+                      const SizedBox(width: 7),
+                      const Expanded(
+                        child: Text(
+                          'Tap P or A to edit attendance.',
+                          style: TextStyle(
+                            fontSize: 12,
+                            color: Colors.black54,
+                          ),
+                        ),
+                      ),
+                      if (isSaving)
+                        const Text(
+                          'Saving...',
+                          style: TextStyle(
+                            color: primaryBlue,
+                            fontSize: 12,
+                          ),
+                        ),
+                    ],
+                  ),
+                ),
+
+                const SizedBox(height: 10),
+
+                Expanded(
+                  child: Container(
+                    margin: const EdgeInsets.symmetric(
+                      horizontal: 12,
+                    ),
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(
+                        color: Colors.grey.shade300,
+                      ),
+                    ),
+                    clipBehavior: Clip.antiAlias,
+                    child: _buildTable(),
+                  ),
+                ),
+
+                Padding(
+                  padding: const EdgeInsets.all(12),
+                  child: Row(
+                    children: [
+                      _buildActionButton(
+                        label: 'Download',
+                        icon: Icons.download,
+                        color: successGreen,
+                        loading: isDownloading,
+                        onPressed: generatedFilePath == null
+                            ? null
+                            : _downloadWorkbook,
+                      ),
+                      const SizedBox(width: 10),
+                      _buildActionButton(
+                        label: 'Export',
+                        icon: Icons.share,
+                        color: primaryBlue,
+                        loading: isExporting,
+                        onPressed: generatedFilePath == null
+                            ? null
+                            : _exportWorkbook,
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
     );
   }
 }
