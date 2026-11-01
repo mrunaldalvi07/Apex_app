@@ -1,3 +1,4 @@
+
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 
@@ -309,11 +310,13 @@ class ReleaseClassroomScreen extends StatelessWidget {
                                   size: 20,
                                 ),
                                 SizedBox(width: 8),
-                                Text(
-                                  "Classroom is currently booked",
-                                  style: TextStyle(
-                                    color: Colors.red,
-                                    fontWeight: FontWeight.w600,
+                                Expanded(
+                                  child: Text(
+                                    "Classroom is currently booked",
+                                    style: TextStyle(
+                                      color: Colors.red,
+                                      fontWeight: FontWeight.w600,
+                                    ),
                                   ),
                                 ),
                               ],
@@ -347,37 +350,46 @@ class ReleaseClassroomScreen extends StatelessWidget {
                                 ),
                               ),
                               onPressed: () async {
+                                // Confirmation dialog
                                 final confirm =
                                     await showDialog<bool>(
                                   context: context,
                                   builder: (dialogContext) {
                                     return AlertDialog(
-                                      shape:
-                                          RoundedRectangleBorder(
+                                      shape: RoundedRectangleBorder(
                                         borderRadius:
                                             BorderRadius.circular(16),
                                       ),
+
+                                      // Responsive dialog title
                                       title: const Row(
                                         children: [
                                           Icon(
-                                            Icons
-                                                .warning_amber_rounded,
+                                            Icons.warning_amber_rounded,
                                             color: Colors.red,
+                                            size: 27,
                                           ),
-                                          SizedBox(width: 8),
-                                          Text(
-                                            "Confirm Release",
-                                            style: TextStyle(
-                                              fontWeight:
-                                                  FontWeight.bold,
+                                          SizedBox(width: 10),
+                                          Expanded(
+                                            child: Text(
+                                              "Confirm Release",
+                                              maxLines: 2,
+                                              softWrap: true,
+                                              style: TextStyle(
+                                                fontWeight:
+                                                    FontWeight.bold,
+                                                fontSize: 22,
+                                              ),
                                             ),
                                           ),
                                         ],
                                       ),
+
                                       content: Text(
                                         "Are you sure?\n\n"
                                         "ROOM $roomNo will be released.",
                                       ),
+
                                       actions: [
                                         TextButton(
                                           onPressed: () {
@@ -395,13 +407,12 @@ class ReleaseClassroomScreen extends StatelessWidget {
                                             ),
                                           ),
                                         ),
+
                                         ElevatedButton(
-                                          style: ElevatedButton
-                                              .styleFrom(
-                                            backgroundColor:
-                                                Colors.red,
-                                            foregroundColor:
-                                                Colors.white,
+                                          style:
+                                              ElevatedButton.styleFrom(
+                                            backgroundColor: Colors.red,
+                                            foregroundColor: Colors.white,
                                           ),
                                           onPressed: () {
                                             Navigator.pop(
@@ -418,11 +429,13 @@ class ReleaseClassroomScreen extends StatelessWidget {
                                   },
                                 );
 
+                                // If cancelled, stop operation
                                 if (confirm != true) {
                                   return;
                                 }
 
                                 try {
+                                  // Update Firestore
                                   await FirebaseFirestore.instance
                                       .collection('classrooms')
                                       .doc(classroomDoc.id)
