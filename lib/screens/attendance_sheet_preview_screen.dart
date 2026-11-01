@@ -122,10 +122,10 @@ class _AttendanceSheetPreviewState
 
       loadedStudents.sort((a, b) {
         final rollA =
-            (a['rollNo'] ?? '').toString();
+            (a['rollNo'] ?? a['rollNumber'] ?? '').toString();
 
         final rollB =
-            (b['rollNo'] ?? '').toString();
+            (b['rollNo'] ?? b['rollNumber'] ?? '').toString();
 
         final numberA =
             int.tryParse(rollA);
@@ -157,7 +157,7 @@ class _AttendanceSheetPreviewState
           )
           .where(
             'course',
-            isEqualTo: widget.course,
+            isEqualTo: widget.course.trim().toUpperCase(),
           )
           .where(
             'status',
@@ -249,13 +249,15 @@ class _AttendanceSheetPreviewState
 
       final data = doc.data();
 
-      if (data?['status'] == 'Present') {
+      final status = data?['status'];
+      if (status == 'Present' || status == 'present' || status == 'P' || status == true) {
         return 'P';
       }
 
       return 'A';
-    } catch (_) {
-      return 'A';
+    } catch (e) {
+      // Do not silently turn a Firestore/network error into an Absent mark.
+      rethrow;
     }
   }
 
@@ -271,10 +273,10 @@ class _AttendanceSheetPreviewState
         student['id'].toString();
 
     final rollNo =
-        (student['rollNo'] ?? '').toString();
+        (student['rollNo'] ?? student['rollNumber'] ?? '').toString();
 
     final name =
-        (student['name'] ?? '').toString();
+        (student['name'] ?? student['displayName'] ?? student['fullName'] ?? '').toString();
 
     return FutureBuilder<List<String>>(
       future: Future.wait(
@@ -289,6 +291,9 @@ class _AttendanceSheetPreviewState
         context,
         snapshot,
       ) {
+        if (snapshot.hasError) {
+          return _buildLoadingRow(index, rollNo, 'Attendance read error');
+        }
         if (!snapshot.hasData) {
           return _buildLoadingRow(
             index,
@@ -317,7 +322,7 @@ class _AttendanceSheetPreviewState
             : (present / total) * 100;
 
         final detained =
-            percentage < 75;
+            total > 0 && percentage < 75;
 
         return Container(
           decoration: BoxDecoration(
@@ -395,9 +400,7 @@ class _AttendanceSheetPreviewState
                           BorderRadius.circular(8),
                     ),
                     child: Text(
-                      detained
-                          ? 'Detained'
-                          : 'Regular',
+                      total == 0 ? 'No Classes' : (detained ? 'Detained' : 'Regular'),
                       style: TextStyle(
                         color: detained
                             ? warningOrange

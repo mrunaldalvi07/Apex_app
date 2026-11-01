@@ -1,9 +1,14 @@
 import 'dart:io';
+import 'dart:typed_data';
 
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:excel/excel.dart';
+import 'package:file_picker/file_picker.dart';
+import 'package:pdf/widgets.dart' as pw;
 import 'package:path_provider/path_provider.dart';
 import 'package:share_plus/share_plus.dart';
+
+import 'attendance_summary_service.dart';
 
 class AttendanceExportService {
   AttendanceExportService({
@@ -518,6 +523,191 @@ class AttendanceExportService {
   }
 
   // ============================================================
+  // ANNUAL WORKBOOK: ONE FILE WITH 12 MONTH TABS
+  // ============================================================
+
+  Future<String> exportAnnualAttendanceWorkbook({
+    required String branch,
+    required String year,
+    required String course,
+  }) async {
+    final cleanBranch = branch.trim().toUpperCase();
+    final cleanYear = year.trim().replaceAll(RegExp(r'\s*Year$', caseSensitive: false), '');
+    final cleanCourse = course.trim().toUpperCase();
+    if (cleanBranch.isEmpty || cleanYear.isEmpty || cleanCourse.isEmpty) {
+      throw ArgumentError('Branch, year and course are required.');
+    }
+
+    final studentSnapshot = await _firestore.collection('users')
+        .where('role', isEqualTo: 'student')
+        .where('branch', isEqualTo: cleanBranch)
+        .where('year', isEqualTo: cleanYear)
+        .get();
+    final students = studentSnapshot.docs.map((doc) => <String, dynamic>{
+      'id': doc.id,
+      ...doc.data(),
+    }).toList();
+    students.sort((a, b) {
+      final ra = _getRollNumber(a);
+      final rb = _getRollNumber(b);
+      final na = int.tryParse(ra);
+      final nb = int.tryParse(rb);
+      if (na != null && nb != null) return na.compareTo(nb);
+      return ra.compareTo(rb);
+    });
+
+    final sessionSnapshot = await _firestore.collection('live_sessions')
+        .where('branch', isEqualTo: cleanBranch)
+        .where('year', isEqualTo: cleanYear)
+        .where('course', isEqualTo: cleanCourse)
+        .where('status', isEqualTo: 'ended')
+        .get();
+
+    final sessionsByMonth = <int, List<Map<String, dynamic>>>{
+      for (var m = 1; m <= 12; m++) m: <Map<String, dynamic>>[],
+    };
+    for (final doc in sessionSnapshot.docs) {
+      final date = _getDate(doc.data()['createdAt']);
+      if (date == null) continue;
+      sessionsByMonth[date.month]!.add({'id': doc.id, ...doc.data()});
+    }
+
+    final excel = Excel.createExcel();
+    if (excel.sheets.containsKey('Sheet1')) excel.delete('Sheet1');
+
+    for (var monthIndex = 1; monthIndex <= 12; monthIndex++) {
+      final month = monthNames[monthIndex - 1];
+      final sessions = sessionsByMonth[monthIndex]!
+        ..sort((a, b) => (_getDate(a['createdAt']) ?? DateTime(2000))
+            .compareTo(_getDate(b['createdAt']) ?? DateTime(2000)));
+      final sheet = excel[month];
+      final lastColumn = 2 + sessions.length;
+      sheet.merge(
+        CellIndex.indexByColumnRow(columnIndex: 0, rowIndex: 0),
+        CellIndex.indexByColumnRow(columnIndex: lastColumn, rowIndex: 0),
+      );
+      final title = sheet.cell(CellIndex.indexByColumnRow(columnIndex: 0, rowIndex: 0));
+      title.value = TextCellValue('ATTENDANCE REGISTER - $month');
+      title.cellStyle = _titleStyle();
+      sheet.merge(
+        CellIndex.indexByColumnRow(columnIndex: 0, rowIndex: 1),
+        CellIndex.indexByColumnRow(columnIndex: lastColumn, rowIndex: 1),
+      );
+      final info = sheet.cell(CellIndex.indexByColumnRow(columnIndex: 0, rowIndex: 1));
+      info.value = TextCellValue('Branch: $cleanBranch    Year: $cleanYear    Course: $cleanCourse');
+      info.cellStyle = _infoStyle();
+
+      _setCell(sheet, 0, 3, 'Sr No', _headerStyle());
+      _setCell(sheet, 1, 3, 'Student Name', _headerStyle());
+      _setCell(sheet, 2, 3, 'Roll No', _headerStyle());
+      for (var i = 0; i < sessions.length; i++) {
+        final date = _getDate(sessions[i]['createdAt']);
+        final label = date == null ? '-' : '${date.day.toString().padLeft(2, '0')}-${date.month.toString().padLeft(2, '0')}';
+        _setCell(sheet, 3 + i, 3, label, _headerStyle());
+      }
+
+      // Fetch each session's attendance once. Missing records for completed sessions are A.
+      final marksBySession = <String, Set<String>>{};
+      for (final session in sessions) {
+        final snapshot = await _firestore.collection('attendance')
+            .doc(session['id'].toString()).collection('students').get();
+        marksBySession[session['id'].toString()] = snapshot.docs
+            .where((d) => _isPresentStatus(d.data()['status']))
+            .map((d) => d.id).toSet();
+      }
+
+      for (var studentIndex = 0; studentIndex < students.length; studentIndex++) {
+        final student = students[studentIndex];
+        final row = 4 + studentIndex;
+        final studentId = student['id'].toString();
+        _setCell(sheet, 0, row, '${studentIndex + 1}', _bodyStyle());
+        _setCell(sheet, 1, row, _getStudentName(student), _bodyStyle());
+        _setCell(sheet, 2, row, _getRollNumber(student), _bodyStyle());
+        for (var sessionIndex = 0; sessionIndex < sessions.length; sessionIndex++) {
+          final id = sessions[sessionIndex]['id'].toString();
+          final mark = marksBySession[id]!.contains(studentId) ? 'P' : 'A';
+          _setCell(sheet, 3 + sessionIndex, row, mark, _bodyStyle());
+        }
+      }
+      sheet.setColumnWidth(0, 9);
+      sheet.setColumnWidth(1, 30);
+      sheet.setColumnWidth(2, 13);
+      for (var i = 0; i < sessions.length; i++) {
+        sheet.setColumnWidth(3 + i, 10);
+      }
+      sheet.setRowHeight(0, 28);
+      sheet.setRowHeight(1, 24);
+      sheet.setRowHeight(3, 30);
+    }
+
+    final bytes = excel.encode();
+    if (bytes == null || bytes.isEmpty) throw Exception('Could not create annual workbook.');
+    final directory = await getApplicationDocumentsDirectory();
+    final fileName = '${cleanBranch}_${cleanYear}_${cleanCourse.replaceAll(RegExp(r'[^A-Z0-9]+'), '_')}_Annual_Attendance.xlsx';
+    final file = File('${directory.path}/$fileName');
+    await file.writeAsBytes(bytes, flush: true);
+    return file.path;
+  }
+
+  bool _isPresentStatus(dynamic status) {
+    if (status == true) return true;
+    final value = status?.toString().trim().toLowerCase();
+    return value == 'present' || value == 'p' || value == 'true';
+  }
+
+  Future<void> shareAnnualAttendanceWorkbook({
+    required String branch,
+    required String year,
+    required String course,
+  }) async {
+    final path = await exportAnnualAttendanceWorkbook(
+      branch: branch, year: year, course: course,
+    );
+    await Share.shareXFiles(
+      [XFile(path)],
+      subject: 'Annual Attendance Report - $course',
+      text: 'Annual attendance workbook\nBranch: $branch\nYear: $year\nCourse: $course',
+    );
+  }
+
+  // Creates a selected-month PDF and opens Android's save-location picker.
+  Future<String?> downloadAttendancePdf({
+    required String branch,
+    required String year,
+    required String course,
+    required String month,
+  }) async {
+    final summary = await AttendanceSummaryService(firestore: _firestore)
+        .getAttendanceSummary(
+      branch: branch, year: year, course: course, month: month,
+    );
+    final pdf = pw.Document();
+    pdf.addPage(pw.MultiPage(build: (context) => [
+      pw.Text('ATTENDANCE REPORT', style: pw.TextStyle(fontSize: 20, fontWeight: pw.FontWeight.bold)),
+      pw.SizedBox(height: 8),
+      pw.Text('Branch: $branch    Year: $year    Course: $course    Month: $month'),
+      pw.SizedBox(height: 14),
+      pw.Table.fromTextArray(
+        headers: const ['Sr No', 'Student Name', 'Roll No', 'Present', 'Absent', 'Attendance %', 'Status'],
+        data: summary.asMap().entries.map((entry) {
+          final s = entry.value;
+          return ['${entry.key + 1}', s.studentName, s.rollNo, '${s.present}', '${s.absent}', '${s.attendancePercentage.toStringAsFixed(1)}%', s.status];
+        }).toList(),
+      ),
+      pw.SizedBox(height: 12),
+      pw.Text('Total students: ${summary.length}'),
+    ]));
+
+    final safeCourse = course.replaceAll(RegExp(r'[^A-Za-z0-9]+'), '_');
+    final fileName = '${branch}_${year}_${safeCourse}_${month}_Attendance.pdf';
+    final bytes = await pdf.save();
+    final directory = await getApplicationDocumentsDirectory();
+    final file = File('${directory.path}/$fileName');
+    await file.writeAsBytes(bytes, flush: true);
+    return file.path;
+  }
+
+  // ============================================================
   // GET ATTENDANCE MARK
   // ============================================================
 
@@ -556,10 +746,9 @@ class AttendanceExportService {
 
       // Everything else = ABSENT
       return 'A';
-    } catch (_) {
-      // If attendance cannot be found,
-      // treat the student as absent.
-      return 'A';
+    } catch (e) {
+      // A failed Firestore read is not proof of absence.
+      rethrow;
     }
   }
 

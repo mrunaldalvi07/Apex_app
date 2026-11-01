@@ -28,10 +28,7 @@ class _AttendanceExportScreenState extends State<AttendanceExportScreen> {
   // DATA
   // ============================================================
 
-  final List<String> branches = [
-    'IF',
-    'CM',
-  ];
+  final List<String> branches = ['IT', 'CM'];
 
   final List<String> years = [
     '1',
@@ -40,14 +37,11 @@ class _AttendanceExportScreenState extends State<AttendanceExportScreen> {
   ];
 
   final List<String> courses = [
-    'OPS',
-    'JAVA',
-    'PYTHON',
-    'DBMS',
-    'NETWORKING',
-    'DSA',
-    'OS',
-    'SWE',
+    'Object Oriented Programming',
+    'Database Management Systems',
+    'Computer Networks',
+    'Java Programming',
+    'Python Programming',
   ];
 
   final List<String> months = [
@@ -111,11 +105,10 @@ class _AttendanceExportScreenState extends State<AttendanceExportScreen> {
     });
 
     try {
-      await _exportService.exportAttendanceSheet(
+      await _exportService.exportAnnualAttendanceWorkbook(
         branch: selectedBranch!,
         year: selectedYear!,
         course: selectedCourse!,
-        month: selectedMonth!,
       );
 
       if (!mounted) return;
@@ -157,11 +150,10 @@ class _AttendanceExportScreenState extends State<AttendanceExportScreen> {
     });
 
     try {
-      await _exportService.shareAttendanceSheet(
+      await _exportService.shareAnnualAttendanceWorkbook(
         branch: selectedBranch!,
         year: selectedYear!,
         course: selectedCourse!,
-        month: selectedMonth!,
       );
 
       if (!mounted) return;

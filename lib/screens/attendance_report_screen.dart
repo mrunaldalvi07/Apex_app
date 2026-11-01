@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../services/attendance_export_service.dart';
+import 'attendance_sheet_preview_screen.dart';
 
 class AttendanceReportScreen extends StatefulWidget {
   const AttendanceReportScreen({super.key});
@@ -32,15 +33,11 @@ class _AttendanceReportScreenState extends State<AttendanceReportScreen> {
   // ============================================================
 
   final List<String> _branches = <String>[
-    'IF',
+    'IT',
     'CM',
   ];
 
-  final List<String> _years = <String>[
-    '1 Year',
-    '2 Year',
-    '3 Year',
-  ];
+  final List<String> _years = <String>['1', '2', '3'];
 
   final List<String> _courses = <String>[
     'Object Oriented Programming',
@@ -446,7 +443,7 @@ class _AttendanceReportScreenState extends State<AttendanceReportScreen> {
           _buildActionButton(
             icon: Icons.table_view_rounded,
             title: 'Generate Sheet',
-            subtitle: 'Create the attendance Excel sheet',
+            subtitle: 'Preview the selected month attendance register',
             iconColor: successGreen,
             onTap: _generateSheet,
           ),
@@ -454,7 +451,7 @@ class _AttendanceReportScreenState extends State<AttendanceReportScreen> {
           _buildActionButton(
             icon: Icons.download_rounded,
             title: 'Download Sheet',
-            subtitle: 'Generate and save the attendance sheet',
+            subtitle: 'Save the selected month as a PDF',
             iconColor: primaryBlue,
             onTap: _downloadSheet,
           ),
@@ -462,7 +459,7 @@ class _AttendanceReportScreenState extends State<AttendanceReportScreen> {
           _buildActionButton(
             icon: Icons.share_rounded,
             title: 'Export Sheet',
-            subtitle: 'Share the generated attendance sheet',
+            subtitle: 'Share the annual Excel workbook with 12 month tabs',
             iconColor: cyan,
             onTap: _exportSheet,
           ),
@@ -608,98 +605,47 @@ class _AttendanceReportScreenState extends State<AttendanceReportScreen> {
   // ============================================================
 
   Future<void> _generateSheet() async {
-    if (!_validateFilters()) {
-      return;
-    }
-
-    setState(() {
-      _loading = true;
-    });
-
-    try {
-      final String filePath = await _exportService.exportAttendanceSheet(
-        branch: _selectedBranch!,
-        year: _selectedYear!,
-        course: _selectedCourse!,
-        month: _selectedMonth!,
-      );
-
-      if (!mounted) {
-        return;
-      }
-
-      setState(() {
-        _generatedFilePath = filePath;
-      });
-
-      _showMessage(
-        'Attendance sheet generated successfully.',
-      );
-    } catch (e) {
-      if (!mounted) {
-        return;
-      }
-
-      _showMessage(
-        'Unable to generate sheet: $e',
-        isError: true,
-      );
-    } finally {
-      if (mounted) {
-        setState(() {
-          _loading = false;
-        });
-      }
-    }
+    if (!_validateFilters()) return;
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (_) => AttendanceSheetPreview(
+          branch: _selectedBranch!,
+          year: _selectedYear!,
+          course: _selectedCourse!,
+          month: _selectedMonth!,
+        ),
+      ),
+    );
   }
 
   // ============================================================
-  // DOWNLOAD
+  // DOWNLOAD PDF TO A USER-SELECTED LOCATION (ANDROID DOWNLOADS)
   // ============================================================
 
   Future<void> _downloadSheet() async {
-    if (!_validateFilters()) {
-      return;
-    }
-
-    setState(() {
-      _loading = true;
-    });
-
+    if (!_validateFilters()) return;
+    if (_loading) return;
+    setState(() => _loading = true);
     try {
-      final String filePath = await _exportService.exportAttendanceSheet(
+      final savedPath = await _exportService.downloadAttendancePdf(
         branch: _selectedBranch!,
         year: _selectedYear!,
         course: _selectedCourse!,
         month: _selectedMonth!,
       );
-
-      if (!mounted) {
-        return;
+      if (!mounted) return;
+      if (savedPath == null || savedPath.isEmpty) {
+        _showMessage('Save cancelled.');
+      } else {
+        setState(() => _generatedFilePath = savedPath);
+        _showMessage('PDF saved successfully.');
       }
-
-      setState(() {
-        _generatedFilePath = filePath;
-      });
-
-      _showMessage(
-        'Attendance sheet saved successfully.',
-      );
     } catch (e) {
-      if (!mounted) {
-        return;
-      }
-
-      _showMessage(
-        'Unable to save sheet: $e',
-        isError: true,
-      );
+      if (!mounted) return;
+      _showMessage('Unable to save PDF: $e', isError: true);
     } finally {
-      if (mounted) {
-        setState(() {
-          _loading = false;
-        });
-      }
+      if (mounted) setState(() => _loading = false);
     }
   }
 
@@ -717,11 +663,10 @@ class _AttendanceReportScreenState extends State<AttendanceReportScreen> {
     });
 
     try {
-      await _exportService.shareAttendanceSheet(
+      await _exportService.shareAnnualAttendanceWorkbook(
         branch: _selectedBranch!,
         year: _selectedYear!,
         course: _selectedCourse!,
-        month: _selectedMonth!,
       );
 
       if (!mounted) {
