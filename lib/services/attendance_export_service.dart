@@ -24,6 +24,34 @@ class AttendanceExportService {
     'December',
   ];
 
+  // Converts 1, 2, 3 into 1 Year, 2 Year, 3 Year.
+  String _displayYear(String year) {
+    final value = year.trim().toLowerCase();
+
+    switch (value) {
+      case '1':
+      case '1 year':
+      case 'first year':
+      case 'fy':
+        return '1 Year';
+
+      case '2':
+      case '2 year':
+      case 'second year':
+      case 'sy':
+        return '2 Year';
+
+      case '3':
+      case '3 year':
+      case 'third year':
+      case 'ty':
+        return '3 Year';
+
+      default:
+        return year;
+    }
+  }
+
   DateTime? _getDate(dynamic value) {
     if (value is Timestamp) return value.toDate();
     if (value is DateTime) return value;
@@ -39,10 +67,6 @@ class AttendanceExportService {
     return status == 'present' ||
         status == 'p' ||
         status == 'true';
-  }
-
-  String _getStatus(double percentage) {
-    return percentage >= 75 ? 'Eligible' : 'Detained';
   }
 
   Future<List<Map<String, dynamic>>> _getStudents(
@@ -140,8 +164,31 @@ class AttendanceExportService {
       excel.delete('Sheet1');
     }
 
+    final displayYear = _displayYear(year);
+
     for (final month in months) {
       final sheet = excel[month];
+
+      final monthSessions = sessions.where((session) {
+        final date = session['date'] as DateTime;
+        return date.month == months.indexOf(month) + 1;
+      }).toList();
+
+      // Original approved Excel column format.
+      final headers = [
+        'Sr No',
+        'Roll No',
+        'Name',
+        ...monthSessions.map((session) {
+          final date = session['date'] as DateTime;
+          return '${date.day}/${date.month}';
+        }),
+      ];
+
+      // Merge title cells according to the number of columns.
+      final lastColumn = headers.length > 3
+          ? headers.length - 1
+          : 2;
 
       sheet.merge(
         CellIndex.indexByColumnRow(
@@ -149,39 +196,22 @@ class AttendanceExportService {
           rowIndex: 0,
         ),
         CellIndex.indexByColumnRow(
-          columnIndex: 4,
+          columnIndex: lastColumn,
           rowIndex: 0,
         ),
       );
 
+      // Monthly title with course and year.
       sheet.cell(
         CellIndex.indexByColumnRow(
           columnIndex: 0,
           rowIndex: 0,
         ),
       ).value = TextCellValue(
-        'APEX ATTENDANCE REPORT - $month',
+        'APEX ATTENDANCE REPORT - $month - $course - $displayYear',
       );
 
-      final monthSessions = sessions.where((session) {
-        final date = session['date'] as DateTime;
-        return date.month == months.indexOf(month) + 1;
-      }).toList();
-
-      final headers = [
-        'Sr No',
-        'Student Name',
-        'Roll No',
-        ...monthSessions.map((session) {
-          final date = session['date'] as DateTime;
-          return '${date.day}/${date.month}';
-        }),
-        'Present',
-        'Absent',
-        'Attendance %',
-        'Status',
-      ];
-
+      // Column headings.
       for (int col = 0; col < headers.length; col++) {
         sheet.cell(
           CellIndex.indexByColumnRow(
@@ -191,6 +221,7 @@ class AttendanceExportService {
         ).value = TextCellValue(headers[col]);
       }
 
+      // Student attendance data.
       for (int row = 0; row < students.length; row++) {
         final student = students[row];
         final excelRow = row + 3;
@@ -207,20 +238,22 @@ class AttendanceExportService {
             columnIndex: 1,
             rowIndex: excelRow,
           ),
-        ).value = TextCellValue(student['name'].toString());
+        ).value = TextCellValue(
+          student['rollNo'].toString(),
+        );
 
         sheet.cell(
           CellIndex.indexByColumnRow(
             columnIndex: 2,
             rowIndex: excelRow,
           ),
-        ).value = TextCellValue(student['rollNo'].toString());
-
-        int present = 0;
-        int absent = 0;
+        ).value = TextCellValue(
+          student['name'].toString(),
+        );
 
         for (int col = 0; col < monthSessions.length; col++) {
           final session = monthSessions[col];
+
           final sessionId = session['id'].toString();
           final studentId = student['id'].toString();
 
@@ -233,12 +266,6 @@ class AttendanceExportService {
                   studentId,
                 );
 
-          if (isPresent) {
-            present++;
-          } else {
-            absent++;
-          }
-
           sheet.cell(
             CellIndex.indexByColumnRow(
               columnIndex: col + 3,
@@ -248,50 +275,22 @@ class AttendanceExportService {
             isPresent ? 'P' : 'A',
           );
         }
-
-        final total = present + absent;
-        final percentage = total == 0
-            ? 0.0
-            : (present / total) * 100;
-
-        final summaryStart = monthSessions.length + 3;
-
-        final values = [
-          present,
-          absent,
-          '${percentage.toStringAsFixed(2)}%',
-          _getStatus(percentage),
-        ];
-
-        for (int i = 0; i < values.length; i++) {
-          final cell = sheet.cell(
-            CellIndex.indexByColumnRow(
-              columnIndex: summaryStart + i,
-              rowIndex: excelRow,
-            ),
-          );
-
-          if (values[i] is int) {
-            cell.value = IntCellValue(values[i] as int);
-          } else {
-            cell.value = TextCellValue(values[i].toString());
-          }
-        }
       }
 
+      // Column widths.
       sheet.setColumnWidth(0, 10);
-      sheet.setColumnWidth(1, 25);
-      sheet.setColumnWidth(2, 15);
+      sheet.setColumnWidth(1, 15);
+      sheet.setColumnWidth(2, 25);
 
       for (int col = 3; col < headers.length; col++) {
-        sheet.setColumnWidth(col, 15);
+        sheet.setColumnWidth(col, 12);
       }
     }
 
     final directory = await getApplicationDocumentsDirectory();
 
     final filePath =
-        '${directory.path}/APEX_Attendance_${branch}_${year}_${course.replaceAll(' ', '_')}.xlsx';
+        '${directory.path}/APEX_Attendance_${branch}_${displayYear.replaceAll(' ', '_')}_${course.replaceAll(' ', '_')}.xlsx';
 
     final bytes = excel.encode();
 
