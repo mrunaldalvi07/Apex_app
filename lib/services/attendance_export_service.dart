@@ -149,6 +149,49 @@ class AttendanceExportService {
     return _isPresent(data['status']);
   }
 
+  // ---------------------------------------------------------------------------
+  // Styles copied from the approved Excel template.
+  // ---------------------------------------------------------------------------
+
+  // Row 1: "ATTENDANCE REGISTER - Month" (bold, 16, centered).
+  CellStyle get _titleStyle => CellStyle(
+        bold: true,
+        fontSize: 16,
+        horizontalAlign: HorizontalAlign.Center,
+        verticalAlign: VerticalAlign.Center,
+      );
+
+  // Row 2: "Branch: .. Year: .. Course: .." (bold, 11, centered).
+  CellStyle get _subTitleStyle => CellStyle(
+        bold: true,
+        fontSize: 11,
+        horizontalAlign: HorizontalAlign.Center,
+        verticalAlign: VerticalAlign.Center,
+      );
+
+  // Row 4: table header (bold, 11, centered, thin borders).
+  CellStyle get _headerStyle => CellStyle(
+        bold: true,
+        fontSize: 11,
+        horizontalAlign: HorizontalAlign.Center,
+        verticalAlign: VerticalAlign.Center,
+        leftBorder: Border(borderStyle: BorderStyle.Thin),
+        rightBorder: Border(borderStyle: BorderStyle.Thin),
+        topBorder: Border(borderStyle: BorderStyle.Thin),
+        bottomBorder: Border(borderStyle: BorderStyle.Thin),
+      );
+
+  // Data rows (size 10, centered, thin borders).
+  CellStyle get _dataStyle => CellStyle(
+        fontSize: 10,
+        horizontalAlign: HorizontalAlign.Center,
+        verticalAlign: VerticalAlign.Center,
+        leftBorder: Border(borderStyle: BorderStyle.Thin),
+        rightBorder: Border(borderStyle: BorderStyle.Thin),
+        topBorder: Border(borderStyle: BorderStyle.Thin),
+        bottomBorder: Border(borderStyle: BorderStyle.Thin),
+      );
+
   Future<String> generateAnnualWorkbook({
     required String branch,
     required String year,
@@ -160,12 +203,7 @@ class AttendanceExportService {
 
     final excel = Excel.createExcel();
 
-    if (excel.sheets.containsKey('Sheet1')) {
-      excel.delete('Sheet1');
-    }
-
-    final displayYear = _displayYear(year);
-
+    // One workbook with 12 month sheets only.
     for (final month in months) {
       final sheet = excel[month];
 
@@ -174,82 +212,78 @@ class AttendanceExportService {
         return date.month == months.indexOf(month) + 1;
       }).toList();
 
-      // Original approved Excel column format.
+      // Template columns: Sr No | Student Name | Roll No | date columns...
       final headers = [
         'Sr No',
+        'Student Name',
         'Roll No',
-        'Name',
         ...monthSessions.map((session) {
           final date = session['date'] as DateTime;
           return '${date.day}/${date.month}';
         }),
       ];
 
-      // Merge title cells according to the number of columns.
-      final lastColumn = headers.length > 3
-          ? headers.length - 1
-          : 2;
+      final lastColumn = headers.length - 1;
 
+      // Row 1: title merged across the whole table width.
       sheet.merge(
-        CellIndex.indexByColumnRow(
-          columnIndex: 0,
-          rowIndex: 0,
-        ),
-        CellIndex.indexByColumnRow(
-          columnIndex: lastColumn,
-          rowIndex: 0,
-        ),
+        CellIndex.indexByColumnRow(columnIndex: 0, rowIndex: 0),
+        CellIndex.indexByColumnRow(columnIndex: lastColumn, rowIndex: 0),
       );
 
-      // Monthly title with course and year.
-      sheet.cell(
-        CellIndex.indexByColumnRow(
-          columnIndex: 0,
-          rowIndex: 0,
-        ),
-      ).value = TextCellValue(
-        'APEX ATTENDANCE REPORT - $month - $course - $displayYear',
+      final titleCell = sheet.cell(
+        CellIndex.indexByColumnRow(columnIndex: 0, rowIndex: 0),
+      );
+      titleCell.value = TextCellValue('ATTENDANCE REGISTER - $month');
+      titleCell.cellStyle = _titleStyle;
+
+      // Row 2: branch / year / course merged across the whole table width.
+      sheet.merge(
+        CellIndex.indexByColumnRow(columnIndex: 0, rowIndex: 1),
+        CellIndex.indexByColumnRow(columnIndex: lastColumn, rowIndex: 1),
       );
 
-      // Column headings.
+      final subTitleCell = sheet.cell(
+        CellIndex.indexByColumnRow(columnIndex: 0, rowIndex: 1),
+      );
+      subTitleCell.value = TextCellValue(
+        'Branch: $branch    Year: $year    Course: $course',
+      );
+      subTitleCell.cellStyle = _subTitleStyle;
+
+      // Row 3 stays blank (as in the template).
+
+      // Row 4: column headings.
       for (int col = 0; col < headers.length; col++) {
-        sheet.cell(
-          CellIndex.indexByColumnRow(
-            columnIndex: col,
-            rowIndex: 2,
-          ),
-        ).value = TextCellValue(headers[col]);
+        final cell = sheet.cell(
+          CellIndex.indexByColumnRow(columnIndex: col, rowIndex: 3),
+        );
+        cell.value = TextCellValue(headers[col]);
+        cell.cellStyle = _headerStyle;
       }
 
-      // Student attendance data.
+      // Row 5 onwards: student attendance data.
       for (int row = 0; row < students.length; row++) {
         final student = students[row];
-        final excelRow = row + 3;
+        final excelRow = row + 4;
 
-        sheet.cell(
-          CellIndex.indexByColumnRow(
-            columnIndex: 0,
-            rowIndex: excelRow,
-          ),
-        ).value = IntCellValue(row + 1);
-
-        sheet.cell(
-          CellIndex.indexByColumnRow(
-            columnIndex: 1,
-            rowIndex: excelRow,
-          ),
-        ).value = TextCellValue(
-          student['rollNo'].toString(),
+        final srCell = sheet.cell(
+          CellIndex.indexByColumnRow(columnIndex: 0, rowIndex: excelRow),
         );
+        srCell.value = TextCellValue('${row + 1}');
+        srCell.cellStyle = _dataStyle;
 
-        sheet.cell(
-          CellIndex.indexByColumnRow(
-            columnIndex: 2,
-            rowIndex: excelRow,
-          ),
-        ).value = TextCellValue(
-          student['name'].toString(),
+        final nameCell = sheet.cell(
+          CellIndex.indexByColumnRow(columnIndex: 1, rowIndex: excelRow),
         );
+        nameCell.value = TextCellValue(student['name'].toString());
+        nameCell.cellStyle = _dataStyle;
+
+        final rollCell = sheet.cell(
+          CellIndex.indexByColumnRow(columnIndex: 2, rowIndex: excelRow),
+        );
+        rollCell.value = TextCellValue(student['rollNo'].toString());
+        rollCell.cellStyle = _dataStyle;
 
         for (int col = 0; col < monthSessions.length; col++) {
           final session = monthSessions[col];
@@ -266,26 +300,38 @@ class AttendanceExportService {
                   studentId,
                 );
 
-          sheet.cell(
+          final markCell = sheet.cell(
             CellIndex.indexByColumnRow(
               columnIndex: col + 3,
               rowIndex: excelRow,
             ),
-          ).value = TextCellValue(
-            isPresent ? 'P' : 'A',
           );
+          markCell.value = TextCellValue(isPresent ? 'P' : 'A');
+          markCell.cellStyle = _dataStyle;
         }
       }
 
-      // Column widths.
-      sheet.setColumnWidth(0, 10);
-      sheet.setColumnWidth(1, 15);
-      sheet.setColumnWidth(2, 25);
+      // Column widths (same as template).
+      sheet.setColumnWidth(0, 9);
+      sheet.setColumnWidth(1, 30);
+      sheet.setColumnWidth(2, 13);
 
       for (int col = 3; col < headers.length; col++) {
-        sheet.setColumnWidth(col, 12);
+        sheet.setColumnWidth(col, 8);
       }
+
+      // Row heights (same as template).
+      sheet.setRowHeight(0, 28);
+      sheet.setRowHeight(1, 24);
+      sheet.setRowHeight(3, 30);
     }
+
+    // Remove the default empty sheet so only the 12 month sheets remain.
+    if (excel.sheets.containsKey('Sheet1')) {
+      excel.delete('Sheet1');
+    }
+
+    final displayYear = _displayYear(year);
 
     final directory = await getApplicationDocumentsDirectory();
 
