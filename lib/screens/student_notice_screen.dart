@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'notice_details_screen.dart';
+import 'notifications_screen.dart';
 import '../models/notice.dart';
 import '../services/notice_service.dart';
 import 'dart:async';
@@ -20,6 +22,11 @@ class _StudentNoticeScreenState extends State<StudentNoticeScreen> {
   static const Color headingColor = Color(0xFF0F2C59);
   static const Color mutedColor = Color(0xFF708090);
   static const Color borderColor = Color(0xFFE1E8F0);
+
+  static const Color searchGradientLight = Color(0xFFEAF3FC);
+  static const Color searchGradientBlue = Color(0xFFDCEBFA);
+
+  static const Color popupBackground = Color(0xFFF4F8FD);
 
   final TextEditingController _searchController = TextEditingController();
 
@@ -95,7 +102,7 @@ class _StudentNoticeScreenState extends State<StudentNoticeScreen> {
     setState(() {
       starredStatus.clear();
 
-      for (final noticeId in starredNotices.keys) {
+      for (final noticeId in starredNotices) {
         starredStatus[noticeId] = true;
       }
     });
@@ -105,6 +112,88 @@ class _StudentNoticeScreenState extends State<StudentNoticeScreen> {
   void initState() {
     super.initState();
     loadStarredStatus();
+  }
+
+  // Notification bell with live unread count.
+  Widget _buildNotificationBell() {
+    final user = FirebaseAuth.instance.currentUser;
+
+    if (user == null) {
+      return IconButton(
+        tooltip: "Notifications",
+        icon: const Icon(
+          Icons.notifications_none,
+          color: headingColor,
+        ),
+        onPressed: _openNotifications,
+      );
+    }
+
+    return StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
+      stream: FirebaseFirestore.instance
+          .collection('notifications')
+          .where('studentId', isEqualTo: user.uid)
+          .snapshots(),
+      builder: (context, snapshot) {
+        final unreadCount = snapshot.data?.docs
+                .where((doc) => doc.data()['read'] == false)
+                .length ??
+            0;
+
+        return IconButton(
+          tooltip: "Notifications",
+          onPressed: _openNotifications,
+          icon: Stack(
+            clipBehavior: Clip.none,
+            children: [
+              const Icon(
+                Icons.notifications_none,
+                color: headingColor,
+                size: 25,
+              ),
+              if (unreadCount > 0)
+                Positioned(
+                  right: -7,
+                  top: -5,
+                  child: Container(
+                    constraints: const BoxConstraints(
+                      minWidth: 17,
+                      minHeight: 17,
+                    ),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 4,
+                      vertical: 1,
+                    ),
+                    decoration: const BoxDecoration(
+                      color: Color(0xFFD93636),
+                      shape: BoxShape.circle,
+                    ),
+                    alignment: Alignment.center,
+                    child: Text(
+                      unreadCount > 99 ? '99+' : '$unreadCount',
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontSize: 10,
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                  ),
+                ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
+  // Opens the common Notifications screen.
+  void _openNotifications() {
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => const NotificationsScreen(),
+      ),
+    );
   }
 
   @override
@@ -127,6 +216,9 @@ class _StudentNoticeScreenState extends State<StudentNoticeScreen> {
           color: headingColor,
         ),
         actions: [
+          // Notifications
+          _buildNotificationBell(),
+
           // Starred filter
           IconButton(
             icon: Icon(
@@ -170,12 +262,18 @@ class _StudentNoticeScreenState extends State<StudentNoticeScreen> {
               top: 12,
               bottom: 0,
             ),
-            child: Card(
-              elevation: 0,
-              color: Colors.white,
-              shape: RoundedRectangleBorder(
+            child: Container(
+              decoration: BoxDecoration(
+                gradient: const LinearGradient(
+                  colors: [
+                    searchGradientLight,
+                    searchGradientBlue,
+                  ],
+                  begin: Alignment.centerLeft,
+                  end: Alignment.centerRight,
+                ),
                 borderRadius: BorderRadius.circular(30),
-                side: const BorderSide(
+                border: Border.all(
                   color: borderColor,
                 ),
               ),
@@ -326,8 +424,11 @@ class _StudentNoticeScreenState extends State<StudentNoticeScreen> {
                           Navigator.push(
                             context,
                             MaterialPageRoute(
-                              builder: (context) =>
-                                  NoticeDetailsScreen(notice: notice),
+                              builder: (context) => NoticeDetailsScreen(
+                                notice: notice,
+                                showStarredOnly: showStarredOnly,
+                                showPinnedOnly: showPinnedOnly,
+                              ),
                             ),
                           );
                         },
@@ -361,7 +462,7 @@ class _StudentNoticeScreenState extends State<StudentNoticeScreen> {
                                     const Icon(
                                       Icons.star,
                                       size: 16,
-                                      color: Color(0xFFE5A900),
+                                      color: primaryBlue,
                                     ),
                                     const SizedBox(width: 4),
                                   ],
@@ -398,9 +499,10 @@ class _StudentNoticeScreenState extends State<StudentNoticeScreen> {
                                     ),
                                   ),
 
-                                  // Student can only
-                                  // Star / Unstar.
+                                  // Student can only Star / Unstar.
                                   PopupMenuButton<String>(
+                                    color: popupBackground,
+                                    surfaceTintColor: popupBackground,
                                     icon: const Icon(
                                       Icons.more_vert,
                                       color: mutedColor,
@@ -452,11 +554,7 @@ class _StudentNoticeScreenState extends State<StudentNoticeScreen> {
                                                       false)
                                                   ? Icons.star
                                                   : Icons.star_border,
-                                              color:
-                                                  (starredStatus[notice.id] ??
-                                                          false)
-                                                      ? const Color(0xFFE5A900)
-                                                      : headingColor,
+                                              color: primaryBlue,
                                             ),
                                             const SizedBox(width: 10),
                                             Text(
@@ -464,6 +562,9 @@ class _StudentNoticeScreenState extends State<StudentNoticeScreen> {
                                                       false)
                                                   ? "Unstar"
                                                   : "Star",
+                                              style: const TextStyle(
+                                                color: headingColor,
+                                              ),
                                             ),
                                           ],
                                         ),

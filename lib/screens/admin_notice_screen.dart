@@ -1,10 +1,14 @@
+import 'dart:async';
+
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
+
 import 'create_notice_screen.dart';
 import 'notice_details_screen.dart';
+import 'notifications_screen.dart';
 import '../models/notice.dart';
 import '../services/notice_service.dart';
-import 'dart:async';
-import 'package:firebase_auth/firebase_auth.dart';
 
 class AdminNoticeScreen extends StatefulWidget {
   const AdminNoticeScreen({super.key});
@@ -21,17 +25,20 @@ class _AdminNoticeScreenState extends State<AdminNoticeScreen> {
   static const Color headingColor = Color(0xFF0F2C59);
   static const Color mutedColor = Color(0xFF708090);
   static const Color borderColor = Color(0xFFE1E8F0);
-  static const Color searchGradientLight = Color(0xFFEAF3FC);
-  static const Color searchGradientBlue = Color(0xFFDCEBFA);
-  static const Color popupBackground = Color(0xFFF4F8FD);
 
   final TextEditingController _searchController = TextEditingController();
+
   String searchQuery = "";
   Timer? _debounce;
+
   bool showPinnedOnly = false;
   bool showStarredOnly = false;
 
   final Map<String, bool> starredStatus = {};
+
+  // ------------------------------------------------------------
+  // HIGHLIGHT SEARCH TEXT
+  // ------------------------------------------------------------
 
   TextSpan highlightText(String text, String query) {
     if (query.isEmpty) {
@@ -65,6 +72,10 @@ class _AdminNoticeScreenState extends State<AdminNoticeScreen> {
     );
   }
 
+  // ------------------------------------------------------------
+  // FORMAT DATE AND TIME
+  // ------------------------------------------------------------
+
   String formatDateTime(DateTime? dateTime) {
     if (dateTime == null) return "";
 
@@ -85,6 +96,10 @@ class _AdminNoticeScreenState extends State<AdminNoticeScreen> {
     }
   }
 
+  // ------------------------------------------------------------
+  // LOAD STARRED NOTICES
+  // ------------------------------------------------------------
+
   Future<void> loadStarredStatus() async {
     final user = FirebaseAuth.instance.currentUser;
 
@@ -97,11 +112,94 @@ class _AdminNoticeScreenState extends State<AdminNoticeScreen> {
     setState(() {
       starredStatus.clear();
 
-      for (final noticeId in starredNotices.keys) {
+      for (final noticeId in starredNotices) {
         starredStatus[noticeId] = true;
       }
     });
   }
+
+  // ------------------------------------------------------------
+  // OPEN NOTIFICATIONS
+  // ------------------------------------------------------------
+
+  void _openNotifications() {
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (_) => const NotificationsScreen(),
+      ),
+    );
+  }
+
+  // ------------------------------------------------------------
+  // NOTIFICATION BELL WITH UNREAD NOTICE COUNT
+  // ------------------------------------------------------------
+
+  Widget _buildNotificationBell() {
+    final user = FirebaseAuth.instance.currentUser;
+
+    if (user == null) return const SizedBox.shrink();
+
+    return StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
+      stream: FirebaseFirestore.instance
+          .collection('notifications')
+          .where('studentId', isEqualTo: user.uid)
+          .snapshots(),
+      builder: (context, snapshot) {
+        final unreadNoticeCount = snapshot.data?.docs.where((doc) {
+              final data = doc.data();
+
+              return data['type'] == 'notice' && data['read'] != true;
+            }).length ??
+            0;
+
+        return IconButton(
+          tooltip: 'Notifications',
+          onPressed: _openNotifications,
+          icon: Stack(
+            clipBehavior: Clip.none,
+            children: [
+              const Icon(
+                Icons.notifications_outlined,
+                color: headingColor,
+                size: 25,
+              ),
+              if (unreadNoticeCount > 0)
+                Positioned(
+                  right: -6,
+                  top: -5,
+                  child: Container(
+                    padding: const EdgeInsets.all(4),
+                    constraints: const BoxConstraints(
+                      minWidth: 17,
+                      minHeight: 17,
+                    ),
+                    decoration: const BoxDecoration(
+                      color: Colors.red,
+                      shape: BoxShape.circle,
+                    ),
+                    child: Center(
+                      child: Text(
+                        unreadNoticeCount > 99 ? '99+' : '$unreadNoticeCount',
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontSize: 9,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
+  // ------------------------------------------------------------
+  // INITIALIZE
+  // ------------------------------------------------------------
 
   @override
   void initState() {
@@ -109,10 +207,16 @@ class _AdminNoticeScreenState extends State<AdminNoticeScreen> {
     loadStarredStatus();
   }
 
+  // ------------------------------------------------------------
+  // BUILD
+  // ------------------------------------------------------------
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: backgroundColor,
+
+      // APP BAR
       appBar: AppBar(
         backgroundColor: Colors.white,
         elevation: 0,
@@ -129,6 +233,10 @@ class _AdminNoticeScreenState extends State<AdminNoticeScreen> {
           color: headingColor,
         ),
         actions: [
+          // NOTIFICATION BELL
+          _buildNotificationBell(),
+
+          // STARRED FILTER
           IconButton(
             icon: Icon(
               showStarredOnly ? Icons.star : Icons.star_border,
@@ -142,6 +250,8 @@ class _AdminNoticeScreenState extends State<AdminNoticeScreen> {
               });
             },
           ),
+
+          // PINNED FILTER
           IconButton(
             icon: Icon(
               showPinnedOnly ? Icons.push_pin : Icons.push_pin_outlined,
@@ -155,6 +265,8 @@ class _AdminNoticeScreenState extends State<AdminNoticeScreen> {
               });
             },
           ),
+
+          // CREATE NOTICE
           IconButton(
             icon: const Icon(
               Icons.add,
@@ -163,18 +275,21 @@ class _AdminNoticeScreenState extends State<AdminNoticeScreen> {
             onPressed: () {
               Navigator.push(
                 context,
-                MaterialPageRoute(builder: (_) => CreateNoticeScreen()),
+                MaterialPageRoute(
+                  builder: (_) => const CreateNoticeScreen(),
+                ),
               );
             },
           ),
+
           const SizedBox(width: 10),
         ],
       ),
+
+      // BODY
       body: Column(
         children: [
-          // ==========================================================
           // SEARCH BAR
-          // ==========================================================
           Padding(
             padding: const EdgeInsets.only(
               left: 12,
@@ -182,18 +297,12 @@ class _AdminNoticeScreenState extends State<AdminNoticeScreen> {
               top: 12,
               bottom: 0,
             ),
-            child: Container(
-              decoration: BoxDecoration(
-                gradient: const LinearGradient(
-                  colors: [
-                    searchGradientLight,
-                    searchGradientBlue,
-                  ],
-                  begin: Alignment.centerLeft,
-                  end: Alignment.centerRight,
-                ),
+            child: Card(
+              elevation: 0,
+              color: Colors.white,
+              shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(30),
-                border: Border.all(
+                side: const BorderSide(
                   color: borderColor,
                 ),
               ),
@@ -215,22 +324,27 @@ class _AdminNoticeScreenState extends State<AdminNoticeScreen> {
                     border: InputBorder.none,
                   ),
                   onChanged: (value) {
-                    if (_debounce?.isActive ?? false) _debounce!.cancel();
+                    if (_debounce?.isActive ?? false) {
+                      _debounce!.cancel();
+                    }
 
-                    _debounce = Timer(const Duration(milliseconds: 300), () {
-                      setState(() {
-                        searchQuery = value.toLowerCase();
-                      });
-                    });
+                    _debounce = Timer(
+                      const Duration(milliseconds: 300),
+                      () {
+                        if (!mounted) return;
+
+                        setState(() {
+                          searchQuery = value.toLowerCase();
+                        });
+                      },
+                    );
                   },
                 ),
               ),
             ),
           ),
 
-          // ==========================================================
           // FILTER HEADING
-          // ==========================================================
           if (showPinnedOnly || showStarredOnly)
             Padding(
               padding: const EdgeInsets.only(
@@ -272,9 +386,7 @@ class _AdminNoticeScreenState extends State<AdminNoticeScreen> {
               ),
             ),
 
-          // ==========================================================
-          // NOTICES
-          // ==========================================================
+          // NOTICE LIST
           Expanded(
             child: StreamBuilder<List<Notice>>(
               stream: NoticeService.getNotices(),
@@ -283,6 +395,18 @@ class _AdminNoticeScreenState extends State<AdminNoticeScreen> {
                   return const Center(
                     child: CircularProgressIndicator(
                       color: primaryBlue,
+                    ),
+                  );
+                }
+
+                if (snapshot.hasError) {
+                  return const Center(
+                    child: Text(
+                      "Unable to load notices.",
+                      style: TextStyle(
+                        color: mutedColor,
+                        fontSize: 15,
+                      ),
                     ),
                   );
                 }
@@ -346,11 +470,8 @@ class _AdminNoticeScreenState extends State<AdminNoticeScreen> {
                           Navigator.push(
                             context,
                             MaterialPageRoute(
-                              builder: (context) => NoticeDetailsScreen(
-                                notice: notice,
-                                showStarredOnly: showStarredOnly,
-                                showPinnedOnly: showPinnedOnly,
-                              ),
+                              builder: (context) =>
+                                  NoticeDetailsScreen(notice: notice),
                             ),
                           );
                         },
@@ -359,9 +480,6 @@ class _AdminNoticeScreenState extends State<AdminNoticeScreen> {
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              // ==================================================
-                              // CREATOR + DATE
-                              // ==================================================
                               Row(
                                 children: [
                                   if (notice.pinned) ...[
@@ -385,7 +503,7 @@ class _AdminNoticeScreenState extends State<AdminNoticeScreen> {
                                     const Icon(
                                       Icons.star,
                                       size: 16,
-                                      color: primaryBlue,
+                                      color: Color(0xFFE5A900),
                                     ),
                                     const SizedBox(width: 4),
                                   ],
@@ -401,9 +519,7 @@ class _AdminNoticeScreenState extends State<AdminNoticeScreen> {
 
                               const SizedBox(height: 5),
 
-                              // ==================================================
-                              // TITLE + POPUP MENU
-                              // ==================================================
+                              // TITLE AND MENU
                               Row(
                                 children: [
                                   Expanded(
@@ -424,21 +540,17 @@ class _AdminNoticeScreenState extends State<AdminNoticeScreen> {
                                     ),
                                   ),
                                   PopupMenuButton<String>(
-                                    color: popupBackground,
-                                    surfaceTintColor: popupBackground,
                                     icon: const Icon(
                                       Icons.more_vert,
                                       color: mutedColor,
                                     ),
                                     onSelected: (String value) async {
-                                      // ⭐ STAR / UNSTAR
+                                      // STAR / UNSTAR
                                       if (value == "star") {
                                         final user =
                                             FirebaseAuth.instance.currentUser;
 
-                                        if (user == null) {
-                                          return;
-                                        }
+                                        if (user == null) return;
 
                                         try {
                                           await NoticeService.toggleStarNotice(
@@ -456,9 +568,8 @@ class _AdminNoticeScreenState extends State<AdminNoticeScreen> {
                                         } catch (e) {
                                           if (!mounted) return;
 
-                                          ScaffoldMessenger.of(
-                                            context,
-                                          ).showSnackBar(
+                                          ScaffoldMessenger.of(context)
+                                              .showSnackBar(
                                             SnackBar(
                                               content: Text(
                                                 "Failed to update star: $e",
@@ -470,7 +581,7 @@ class _AdminNoticeScreenState extends State<AdminNoticeScreen> {
                                         return;
                                       }
 
-                                      // 📌 PIN / UNPIN
+                                      // PIN / UNPIN
                                       if (value == "pin") {
                                         try {
                                           await NoticeService.togglePinNotice(
@@ -480,9 +591,8 @@ class _AdminNoticeScreenState extends State<AdminNoticeScreen> {
                                         } catch (e) {
                                           if (!mounted) return;
 
-                                          ScaffoldMessenger.of(
-                                            context,
-                                          ).showSnackBar(
+                                          ScaffoldMessenger.of(context)
+                                              .showSnackBar(
                                             SnackBar(
                                               content: Text(
                                                 "Failed to update pin: $e",
@@ -494,9 +604,9 @@ class _AdminNoticeScreenState extends State<AdminNoticeScreen> {
                                         return;
                                       }
 
-                                      // ✏️ EDIT
+                                      // EDIT
                                       if (value == "edit") {
-                                        Navigator.push(
+                                        await Navigator.push(
                                           context,
                                           MaterialPageRoute(
                                             builder: (context) =>
@@ -509,7 +619,7 @@ class _AdminNoticeScreenState extends State<AdminNoticeScreen> {
                                         return;
                                       }
 
-                                      // 🗑️ DELETE
+                                      // DELETE
                                       if (value == "delete") {
                                         final confirm = await showDialog<bool>(
                                           context: context,
@@ -560,18 +670,29 @@ class _AdminNoticeScreenState extends State<AdminNoticeScreen> {
                                         );
 
                                         if (confirm == true) {
-                                          await NoticeService.deleteNotice(
-                                            notice.id!,
-                                          );
+                                          try {
+                                            await NoticeService.deleteNotice(
+                                              notice.id!,
+                                            );
+                                          } catch (e) {
+                                            if (!mounted) return;
 
-                                          if (!mounted) return;
+                                            ScaffoldMessenger.of(context)
+                                                .showSnackBar(
+                                              SnackBar(
+                                                content: Text(
+                                                  "Failed to delete notice: $e",
+                                                ),
+                                              ),
+                                            );
+                                          }
                                         }
 
                                         return;
                                       }
                                     },
                                     itemBuilder: (context) => [
-                                      // ⭐ STAR / UNSTAR
+                                      // STAR / UNSTAR
                                       PopupMenuItem(
                                         value: "star",
                                         child: Row(
@@ -581,7 +702,11 @@ class _AdminNoticeScreenState extends State<AdminNoticeScreen> {
                                                       false)
                                                   ? Icons.star
                                                   : Icons.star_border,
-                                              color: primaryBlue,
+                                              color:
+                                                  (starredStatus[notice.id] ??
+                                                          false)
+                                                      ? const Color(0xFFE5A900)
+                                                      : headingColor,
                                             ),
                                             const SizedBox(width: 10),
                                             Text(
@@ -589,15 +714,12 @@ class _AdminNoticeScreenState extends State<AdminNoticeScreen> {
                                                       false)
                                                   ? "Unstar"
                                                   : "Star",
-                                              style: const TextStyle(
-                                                color: headingColor,
-                                              ),
                                             ),
                                           ],
                                         ),
                                       ),
 
-                                      // 📌 PIN / UNPIN
+                                      // PIN / UNPIN
                                       PopupMenuItem(
                                         value: "pin",
                                         child: Row(
@@ -611,35 +733,27 @@ class _AdminNoticeScreenState extends State<AdminNoticeScreen> {
                                             const SizedBox(width: 10),
                                             Text(
                                               notice.pinned ? "Unpin" : "Pin",
-                                              style: const TextStyle(
-                                                color: headingColor,
-                                              ),
                                             ),
                                           ],
                                         ),
                                       ),
 
-                                      // ✏️ EDIT
+                                      // EDIT
                                       const PopupMenuItem(
                                         value: "edit",
                                         child: Row(
                                           children: [
                                             Icon(
                                               Icons.edit,
-                                              color: primaryBlue,
+                                              color: headingColor,
                                             ),
                                             SizedBox(width: 10),
-                                            Text(
-                                              "Edit",
-                                              style: TextStyle(
-                                                color: headingColor,
-                                              ),
-                                            ),
+                                            Text("Edit"),
                                           ],
                                         ),
                                       ),
 
-                                      // 🗑️ DELETE
+                                      // DELETE
                                       const PopupMenuItem(
                                         value: "delete",
                                         child: Row(
@@ -649,12 +763,7 @@ class _AdminNoticeScreenState extends State<AdminNoticeScreen> {
                                               color: Colors.red,
                                             ),
                                             SizedBox(width: 10),
-                                            Text(
-                                              "Delete",
-                                              style: TextStyle(
-                                                color: headingColor,
-                                              ),
-                                            ),
+                                            Text("Delete"),
                                           ],
                                         ),
                                       ),
@@ -665,9 +774,7 @@ class _AdminNoticeScreenState extends State<AdminNoticeScreen> {
 
                               const SizedBox(height: 2),
 
-                              // ==================================================
                               // DESCRIPTION
-                              // ==================================================
                               Text(
                                 notice.description,
                                 maxLines: 1,
@@ -680,9 +787,7 @@ class _AdminNoticeScreenState extends State<AdminNoticeScreen> {
 
                               const SizedBox(height: 8),
 
-                              // ==================================================
                               // ATTACHMENTS
-                              // ==================================================
                               if (notice.attachmentUrls
                                   .where((file) => file.trim().isNotEmpty)
                                   .isNotEmpty)
@@ -727,6 +832,10 @@ class _AdminNoticeScreenState extends State<AdminNoticeScreen> {
       ),
     );
   }
+
+  // ------------------------------------------------------------
+  // DISPOSE
+  // ------------------------------------------------------------
 
   @override
   void dispose() {

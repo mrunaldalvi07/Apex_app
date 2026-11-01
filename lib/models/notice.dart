@@ -1,3 +1,5 @@
+import 'package:cloud_firestore/cloud_firestore.dart';
+
 class Notice {
   String? id;
   String title;
@@ -23,18 +25,47 @@ class Notice {
     this.pinned = false,
   });
 
-  factory Notice.fromMap(Map<String, dynamic> map, String documentId) {
+  // Safely convert Firestore timestamps or DateTime values.
+  static DateTime? _parseDateTime(dynamic value) {
+    if (value is Timestamp) {
+      return value.toDate();
+    }
+
+    if (value is DateTime) {
+      return value;
+    }
+
+    return null;
+  }
+
+  // Safely convert Firestore list values into string lists.
+  static List<String> _parseStringList(dynamic value) {
+    if (value is! List) {
+      return [];
+    }
+
+    return value
+        .where((item) => item != null)
+        .map((item) => item.toString())
+        .where((item) => item.trim().isNotEmpty)
+        .toList();
+  }
+
+  factory Notice.fromMap(
+    Map<String, dynamic> map,
+    String documentId,
+  ) {
     return Notice(
       id: documentId,
-      title: map['title'] ?? '',
-      description: map['description'] ?? '',
-      createdBy: map['createdBy'],
-      createdByUid: map['createdByUid'],
-      createdAt: map['createdAt']?.toDate(),
-      lastUpdated: map['lastUpdated']?.toDate(),
-      recipients: List<String>.from(map['recipients'] ?? []),
-      attachmentUrls: List<String>.from(map['attachmentUrls'] ?? []),
-      pinned: map['pinned'] ?? false,
+      title: map['title']?.toString() ?? '',
+      description: map['description']?.toString() ?? '',
+      createdBy: map['createdBy']?.toString(),
+      createdByUid: map['createdByUid']?.toString(),
+      createdAt: _parseDateTime(map['createdAt']),
+      lastUpdated: _parseDateTime(map['lastUpdated']),
+      recipients: _parseStringList(map['recipients']),
+      attachmentUrls: _parseStringList(map['attachmentUrls']),
+      pinned: map['pinned'] == true,
     );
   }
 
