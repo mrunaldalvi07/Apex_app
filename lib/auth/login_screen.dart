@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 
 import '../services/fcm_service.dart';
-import '../services/auth_service.dart';
 import 'register_screen.dart';
 import 'role_router.dart';
 
@@ -26,11 +25,10 @@ class _LoginScreenState extends State<LoginScreen> {
   final passwordController = TextEditingController();
 
   bool loading = false;
-  bool googleLoading = false;
   bool resetLoading = false;
   bool obscurePassword = true;
 
-  bool get isLoading => loading || googleLoading || resetLoading;
+  bool get isLoading => loading || resetLoading;
 
   Future<void> login() async {
     if (isLoading) return;
@@ -81,47 +79,7 @@ class _LoginScreenState extends State<LoginScreen> {
     }
   }
 
-  Future<void> signInWithGoogle() async {
-    if (isLoading) return;
 
-    FocusScope.of(context).unfocus();
-
-    setState(() {
-      googleLoading = true;
-    });
-
-    try {
-      final userCredential = await AuthService.signInWithGoogle();
-
-      if (!mounted) return;
-
-      if (userCredential == null) {
-        _showMessage("Google Sign-In was cancelled or failed.");
-        return;
-      }
-
-      await FCMService().initialize();
-
-      if (!mounted) return;
-
-      Navigator.pushReplacement(
-        context,
-        MaterialPageRoute(builder: (_) => const RoleRouter()),
-      );
-    } on FirebaseAuthException catch (e) {
-      if (!mounted) return;
-      _showMessage(_firebaseErrorMessage(e));
-    } catch (_) {
-      if (!mounted) return;
-      _showMessage("Google Sign-In failed. Please try again.");
-    } finally {
-      if (mounted) {
-        setState(() {
-          googleLoading = false;
-        });
-      }
-    }
-  }
 
   Future<void> resetPassword() async {
     if (isLoading) return;
@@ -174,8 +132,6 @@ class _LoginScreenState extends State<LoginScreen> {
         return 'Network error. Please check your connection.';
       case 'operation-not-allowed':
         return 'This login method is not enabled.';
-      case 'google-id-token-missing':
-        return 'Google authentication could not be completed.';
       default:
         return e.message ?? 'Login failed. Please try again.';
     }
@@ -365,41 +321,6 @@ class _LoginScreenState extends State<LoginScreen> {
                   ),
                 ),
                 const SizedBox(height: 20),
-                const Row(
-                  children: [
-                    Expanded(child: Divider()),
-                    Padding(
-                      padding: EdgeInsets.symmetric(horizontal: 10),
-                      child: Text('OR'),
-                    ),
-                    Expanded(child: Divider()),
-                  ],
-                ),
-                const SizedBox(height: 20),
-                SizedBox(
-                  width: double.infinity,
-                  height: 52,
-                  child: OutlinedButton.icon(
-                    style: OutlinedButton.styleFrom(
-                      side: const BorderSide(color: primaryBlue),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(14),
-                      ),
-                    ),
-                    onPressed: isLoading ? null : signInWithGoogle,
-                    icon: googleLoading
-                        ? const SizedBox(
-                            width: 20,
-                            height: 20,
-                            child: CircularProgressIndicator(strokeWidth: 2),
-                          )
-                        : const Icon(Icons.g_mobiledata),
-                    label: Text(
-                      googleLoading ? 'Signing in...' : 'Continue with Google',
-                    ),
-                  ),
-                ),
-                const SizedBox(height: 16),
                 TextButton(
                   onPressed: isLoading
                       ? null

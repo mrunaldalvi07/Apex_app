@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import '../services/fcm_service.dart';
-import '../services/auth_service.dart';
 import 'register_screen.dart';
 import 'role_router.dart';
 
@@ -17,7 +16,6 @@ class _LoginScreenState extends State<LoginScreen> {
   final passwordController = TextEditingController();
 
   bool loading = false;
-  bool googleLoading = false;
   bool obscurePassword = true;
 
   Future<void> login() async {
@@ -73,45 +71,7 @@ class _LoginScreenState extends State<LoginScreen> {
     }
   }
 
-  Future<void> signInWithGoogle() async {
-    try {
-      setState(() {
-        googleLoading = true;
-      });
 
-      final userCredential = await AuthService.signInWithGoogle();
-
-      if (!mounted) return;
-
-      if (userCredential == null) {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(const SnackBar(content: Text("Google Sign-In failed")));
-        return;
-      }
-
-      await FCMService().initialize();
-
-      if (!mounted) return;
-
-      Navigator.pushReplacement(
-        context,
-        MaterialPageRoute(builder: (_) => const RoleRouter()),
-      );
-    } catch (e) {
-      if (!mounted) return;
-
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text("Google Sign-In failed: $e")));
-    } finally {
-      if (mounted) {
-        setState(() {
-          googleLoading = false;
-        });
-      }
-    }
-  }
 
   @override
   void dispose() {
@@ -148,7 +108,7 @@ class _LoginScreenState extends State<LoginScreen> {
 
             TextField(
               controller: emailController,
-              enabled: !loading && !googleLoading,
+              enabled: !loading,
               decoration: InputDecoration(
                 labelText: "Email",
                 hintText: "Enter your email",
@@ -163,7 +123,7 @@ class _LoginScreenState extends State<LoginScreen> {
 
             TextField(
               controller: passwordController,
-              enabled: !loading && !googleLoading,
+              enabled: !loading,
               obscureText: obscurePassword,
               decoration: InputDecoration(
                 labelText: "Password",
@@ -207,52 +167,18 @@ class _LoginScreenState extends State<LoginScreen> {
                   loading ? "Logging in..." : "LOGIN",
                   style: const TextStyle(fontSize: 16),
                 ),
-                onPressed: (loading || googleLoading) ? null : login,
+                onPressed: (loading) ? null : login,
               ),
             ),
 
             const SizedBox(height: 15),
-
-            Row(
-              children: [
-                const Expanded(child: Divider()),
-                Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 10),
-                  child: Text("OR", style: TextStyle(color: Colors.grey[600])),
-                ),
-                const Expanded(child: Divider()),
-              ],
-            ),
-
-            const SizedBox(height: 15),
-
-            SizedBox(
-              width: double.infinity,
-              height: 50,
-              child: OutlinedButton.icon(
-                icon: googleLoading
-                    ? const SizedBox(
-                        width: 20,
-                        height: 20,
-                        child: CircularProgressIndicator(strokeWidth: 2),
-                      )
-                    : const Icon(Icons.g_mobiledata),
-                label: Text(
-                  googleLoading ? "Signing in..." : "Continue with Google",
-                  style: const TextStyle(fontSize: 14),
-                ),
-                onPressed: (loading || googleLoading) ? null : signInWithGoogle,
-              ),
-            ),
-
-            const SizedBox(height: 20),
 
             Row(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
                 const Text("Don't have an account? "),
                 TextButton(
-                  onPressed: (loading || googleLoading)
+                  onPressed: (loading)
                       ? null
                       : () {
                           Navigator.push(

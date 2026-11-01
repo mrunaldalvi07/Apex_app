@@ -41,6 +41,7 @@ class AttendanceExportService {
     required String year,
     required String course,
     required String month,
+    Map<String, String> editedMarks = const {},
   }) async {
     final String cleanBranch = branch.trim().toUpperCase();
     final String cleanYear = year.trim();
@@ -371,7 +372,7 @@ class AttendanceExportService {
         final String sessionId =
             (sessions[sessionIndex]['id'] ?? '').toString();
 
-        final String mark = await _getAttendanceMark(
+        final String mark = editedMarks['$sessionId::$studentId'] ?? await _getAttendanceMark(
           sessionId: sessionId,
           studentId: studentId,
         );
@@ -670,7 +671,7 @@ class AttendanceExportService {
     );
   }
 
-  // Creates a selected-month PDF and opens Android's save-location picker.
+  // Creates a selected-month PDF in the application's documents directory.
   Future<String?> downloadAttendancePdf({
     required String branch,
     required String year,
@@ -700,7 +701,7 @@ class AttendanceExportService {
 
     final safeCourse = course.replaceAll(RegExp(r'[^A-Za-z0-9]+'), '_');
     final fileName = '${branch}_${year}_${safeCourse}_${month}_Attendance.pdf';
-    final bytes = await pdf.save();
+    final Uint8List bytes = await pdf.save();
     final directory = await getApplicationDocumentsDirectory();
     final file = File('${directory.path}/$fileName');
     await file.writeAsBytes(bytes, flush: true);
@@ -910,6 +911,24 @@ class AttendanceExportService {
       bottomBorder: Border(
         borderStyle: BorderStyle.Thin,
       ),
+    );
+  }
+
+  // Save the generated XLSX through Android's system file picker (choose Downloads).
+  Future<String?> downloadAttendanceExcel({
+    required String branch, required String year, required String course,
+    required String month, Map<String, String> editedMarks = const {},
+  }) async {
+    final path = await exportAttendanceSheet(
+      branch: branch, year: year, course: course, month: month, editedMarks: editedMarks,
+    );
+    final file = File(path);
+    if (!await file.exists()) throw Exception('Excel workbook was not generated.');
+    final bytes = await file.readAsBytes();
+    return FilePicker.saveFile(
+      dialogTitle: 'Save Excel attendance workbook in Downloads',
+      fileName: '${year}_${branch}_${course.trim()}.xlsx',
+      type: FileType.custom, allowedExtensions: const ['xlsx'], bytes: bytes,
     );
   }
 
