@@ -316,7 +316,7 @@ class AttendanceExportService {
 
     final bytes = await file.readAsBytes();
 
-    final savedPath = await FilePicker.platform.saveFile(
+    final savedPath = await FilePicker.saveFile(
       dialogTitle: 'Save APEX Attendance Workbook',
       fileName: 'APEX_Attendance.xlsx',
       type: FileType.custom,
