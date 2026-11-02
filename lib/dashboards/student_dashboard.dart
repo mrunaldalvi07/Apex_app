@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 
-import '../auth/login_screen.dart';
 import '../screens/student_complaint_screen.dart';
 import '../screens/student_live_attendance.dart';
 import '../screens/view_classroom_screen.dart';
@@ -14,10 +13,16 @@ class StudentDashboard extends StatelessWidget {
   Future<void> logout(BuildContext context) async {
     try {
       await FirebaseAuth.instance.signOut();
+
       if (!context.mounted) return;
-      Navigator.of(context).pushNamedAndRemoveUntil('/login', (route) => false);
+
+      Navigator.of(context).pushNamedAndRemoveUntil(
+        '/login',
+        (route) => false,
+      );
     } catch (e) {
       if (!context.mounted) return;
+
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text('Logout failed: $e')),
       );
@@ -37,69 +42,76 @@ class StudentDashboard extends StatelessWidget {
           ),
         ],
       ),
-      body: LayoutBuilder(
-        builder: (context, constraints) {
-          final isDesktop = constraints.maxWidth >= 900;
-          return GridView(
-            padding: const EdgeInsets.all(20),
-            gridDelegate: SliverGridDelegateWithMaxCrossAxisExtent(
-              maxCrossAxisExtent: isDesktop ? 250 : 320,
-              mainAxisExtent: isDesktop ? 155 : 175,
-              crossAxisSpacing: 16,
-              mainAxisSpacing: 16,
-            ),
+      body: SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.symmetric(
+            horizontal: 20,
+            vertical: 12,
+          ),
+          child: Column(
             children: [
-              DashboardModuleCard(
-                icon: Icons.fact_check,
-                title: 'Attendance\nIndicator',
-                onTap: () {
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (_) => const StudentLiveAttendanceScreen(),
-                    ),
-                  );
-                },
+              Expanded(
+                child: DashboardModuleCard(
+                  icon: Icons.fact_check,
+                  title: 'Attendance\nIndicator',
+                  onTap: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (_) => const StudentLiveAttendanceScreen(),
+                      ),
+                    );
+                  },
+                ),
               ),
-              DashboardModuleCard(
-                icon: Icons.meeting_room,
-                title: 'Classroom\nScheduler',
-                onTap: () {
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (_) => const ClassroomScreen(),
-                    ),
-                  );
-                },
+              const SizedBox(height: 12),
+              Expanded(
+                child: DashboardModuleCard(
+                  icon: Icons.meeting_room,
+                  title: 'Classroom\nScheduler',
+                  onTap: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (_) => const ClassroomScreen(),
+                      ),
+                    );
+                  },
+                ),
               ),
-              DashboardModuleCard(
-                icon: Icons.report_problem,
-                title: 'Complaint\nManagement',
-                onTap: () {
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (_) => const StudentComplaintScreen(),
-                    ),
-                  );
-                },
+              const SizedBox(height: 12),
+              Expanded(
+                child: DashboardModuleCard(
+                  icon: Icons.report_problem,
+                  title: 'Complaint\nManagement',
+                  onTap: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (_) => const StudentComplaintScreen(),
+                      ),
+                    );
+                  },
+                ),
               ),
-              DashboardModuleCard(
-                icon: Icons.campaign,
-                title: 'Notice\nManagement',
-                onTap: () {
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (_) => const StudentNoticeScreen(),
-                    ),
-                  );
-                },
+              const SizedBox(height: 12),
+              Expanded(
+                child: DashboardModuleCard(
+                  icon: Icons.campaign,
+                  title: 'Notice\nManagement',
+                  onTap: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (_) => const StudentNoticeScreen(),
+                      ),
+                    );
+                  },
+                ),
               ),
             ],
-          );
-        },
+          ),
+        ),
       ),
     );
   }

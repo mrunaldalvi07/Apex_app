@@ -1,8 +1,6 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
-import 'package:firebase_storage/firebase_storage.dart';
 
 import '../models/notice.dart';
 import '../services/notice_service.dart';
@@ -27,8 +25,6 @@ class _CreateNoticeScreenState extends State<CreateNoticeScreen> {
   bool cmStudents = false;
 
   bool isSaving = false;
-
-  List<PlatformFile> selectedFiles = [];
 
   bool get isEditing => widget.notice != null;
 
@@ -63,46 +59,6 @@ class _CreateNoticeScreenState extends State<CreateNoticeScreen> {
     _titleController.dispose();
     _descriptionController.dispose();
     super.dispose();
-  }
-
-  // ------------------------------------------------------------
-  // PICK ATTACHMENTS
-  // ------------------------------------------------------------
-
-  Future<void> _pickFiles() async {
-    try {
-      final result = await FilePicker.pickFiles(
-        allowMultiple: true,
-        withData: true,
-      );
-
-      if (result == null || !mounted) return;
-
-      setState(() {
-        for (final file in result.files) {
-          final alreadySelected = selectedFiles.any(
-            (existing) =>
-                existing.name == file.name && existing.size == file.size,
-          );
-
-          if (!alreadySelected) {
-            selectedFiles.add(file);
-          }
-        }
-      });
-    } catch (error) {
-      if (!mounted) return;
-
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Could not select files: $error')),
-      );
-    }
-  }
-
-  void _removeSelectedFile(int index) {
-    setState(() {
-      selectedFiles.removeAt(index);
-    });
   }
 
   // ------------------------------------------------------------
@@ -170,7 +126,10 @@ class _CreateNoticeScreenState extends State<CreateNoticeScreen> {
         createdAt: existingNotice?.createdAt,
         lastUpdated: DateTime.now(),
         recipients: recipients,
+
+        // Preserve previously uploaded attachments.
         attachmentUrls: existingNotice?.attachmentUrls ?? [],
+
         pinned: existingNotice?.pinned ?? false,
       );
 
@@ -179,26 +138,11 @@ class _CreateNoticeScreenState extends State<CreateNoticeScreen> {
           existingNotice!.id!,
           noticeData,
         );
-
-        // Upload any newly selected attachments.
-        if (selectedFiles.isNotEmpty) {
-          final updatedUrls = await _uploadAdditionalAttachments(
-            existingNotice.id!,
-            selectedFiles,
-          );
-
-          await FirebaseFirestore.instance
-              .collection('notices')
-              .doc(existingNotice.id!)
-              .update({
-            'attachmentUrls': [
-              ...noticeData.attachmentUrls,
-              ...updatedUrls,
-            ],
-          });
-        }
       } else {
-        await NoticeService.createNotice(noticeData, selectedFiles);
+        await NoticeService.createNotice(
+          noticeData,
+          [],
+        );
       }
 
       if (!mounted) return;
@@ -230,42 +174,6 @@ class _CreateNoticeScreenState extends State<CreateNoticeScreen> {
         });
       }
     }
-  }
-
-  // ------------------------------------------------------------
-  // UPLOAD ADDITIONAL ATTACHMENTS WHILE EDITING
-  // ------------------------------------------------------------
-
-  Future<List<String>> _uploadAdditionalAttachments(
-    String noticeId,
-    List<PlatformFile> files,
-  ) async {
-    final storage = await _getStorage();
-
-    final uploadedUrls = <String>[];
-
-    for (final file in files) {
-      if (file.bytes == null) {
-        throw Exception('Could not read file: ${file.name}');
-      }
-
-      final safeFileName =
-          '${DateTime.now().microsecondsSinceEpoch}_${file.name}';
-
-      final storageRef =
-          storage.ref().child('notices').child(noticeId).child(safeFileName);
-
-      await storageRef.putData(file.bytes!);
-
-      uploadedUrls.add(await storageRef.getDownloadURL());
-    }
-
-    return uploadedUrls;
-  }
-
-  Future<dynamic> _getStorage() async {
-    // Import Firebase Storage only when needed.
-    return FirebaseStorage.instance;
   }
 
   // ------------------------------------------------------------
@@ -394,122 +302,6 @@ class _CreateNoticeScreenState extends State<CreateNoticeScreen> {
     );
   }
 
-  Widget _buildExistingAttachments() {
-    final urls = widget.notice?.attachmentUrls ?? [];
-
-    if (urls.isEmpty) return const SizedBox.shrink();
-
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        const Text(
-          'Existing attachments',
-          style: TextStyle(
-            color: headingColor,
-            fontWeight: FontWeight.w600,
-          ),
-        ),
-        const SizedBox(height: 8),
-        ...urls.map(
-          (url) => Container(
-            margin: const EdgeInsets.only(bottom: 8),
-            padding: const EdgeInsets.all(11),
-            decoration: BoxDecoration(
-              color: backgroundColor,
-              borderRadius: BorderRadius.circular(10),
-              border: Border.all(color: borderColor),
-            ),
-            child: Row(
-              children: [
-                const Icon(
-                  Icons.attach_file,
-                  color: primaryBlue,
-                  size: 19,
-                ),
-                const SizedBox(width: 9),
-                Expanded(
-                  child: Text(
-                    Uri.tryParse(url)?.pathSegments.lastOrNull ??
-                        'Existing attachment',
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: const TextStyle(
-                      color: headingColor,
-                      fontSize: 13,
-                    ),
-                  ),
-                ),
-                const Icon(
-                  Icons.check_circle,
-                  color: Colors.green,
-                  size: 18,
-                ),
-              ],
-            ),
-          ),
-        ),
-        const SizedBox(height: 12),
-      ],
-    );
-  }
-
-  Widget _buildSelectedAttachments() {
-    if (selectedFiles.isEmpty) {
-      return const Text(
-        'No new files selected.',
-        style: TextStyle(color: mutedColor, fontSize: 13),
-      );
-    }
-
-    return Column(
-      children: List.generate(selectedFiles.length, (index) {
-        final file = selectedFiles[index];
-
-        return Container(
-          margin: const EdgeInsets.only(bottom: 8),
-          padding: const EdgeInsets.symmetric(
-            horizontal: 12,
-            vertical: 10,
-          ),
-          decoration: BoxDecoration(
-            color: backgroundColor,
-            borderRadius: BorderRadius.circular(10),
-            border: Border.all(color: borderColor),
-          ),
-          child: Row(
-            children: [
-              const Icon(
-                Icons.insert_drive_file_outlined,
-                color: primaryBlue,
-                size: 20,
-              ),
-              const SizedBox(width: 10),
-              Expanded(
-                child: Text(
-                  file.name,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: const TextStyle(
-                    color: headingColor,
-                    fontSize: 13,
-                  ),
-                ),
-              ),
-              IconButton(
-                onPressed: isSaving ? null : () => _removeSelectedFile(index),
-                icon: const Icon(
-                  Icons.close,
-                  size: 19,
-                  color: Colors.red,
-                ),
-              ),
-            ],
-          ),
-        );
-      }),
-    );
-  }
-
   // ------------------------------------------------------------
   // BUILD
   // ------------------------------------------------------------
@@ -630,39 +422,6 @@ class _CreateNoticeScreenState extends State<CreateNoticeScreen> {
                                 () => cmStudents = value ?? false,
                               );
                             },
-                          ),
-                        ],
-                      ),
-                    ),
-
-                    const SizedBox(height: 16),
-
-                    // ATTACHMENTS
-                    _buildSectionCard(
-                      title: 'Attachments',
-                      subtitle: 'Attach supporting documents if required.',
-                      icon: Icons.attach_file,
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          _buildExistingAttachments(),
-                          _buildSelectedAttachments(),
-                          const SizedBox(height: 12),
-                          OutlinedButton.icon(
-                            onPressed: isSaving ? null : _pickFiles,
-                            icon: const Icon(Icons.add),
-                            label: const Text('Add files'),
-                            style: OutlinedButton.styleFrom(
-                              foregroundColor: primaryBlue,
-                              side: const BorderSide(color: primaryBlue),
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(10),
-                              ),
-                              padding: const EdgeInsets.symmetric(
-                                horizontal: 16,
-                                vertical: 12,
-                              ),
-                            ),
                           ),
                         ],
                       ),

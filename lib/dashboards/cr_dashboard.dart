@@ -13,10 +13,16 @@ class CrDashboard extends StatelessWidget {
   Future<void> logout(BuildContext context) async {
     try {
       await FirebaseAuth.instance.signOut();
+
       if (!context.mounted) return;
-      Navigator.of(context).pushNamedAndRemoveUntil('/login', (route) => false);
+
+      Navigator.of(context).pushNamedAndRemoveUntil(
+        '/login',
+        (route) => false,
+      );
     } catch (e) {
       if (!context.mounted) return;
+
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text('Logout failed: $e')),
       );
@@ -36,70 +42,79 @@ class CrDashboard extends StatelessWidget {
           ),
         ],
       ),
-      body: LayoutBuilder(
-        builder: (context, constraints) {
-          final isDesktop = constraints.maxWidth >= 900;
-          return GridView(
-            padding: const EdgeInsets.all(20),
-            gridDelegate: SliverGridDelegateWithMaxCrossAxisExtent(
-              maxCrossAxisExtent: isDesktop ? 250 : 320,
-              mainAxisExtent: isDesktop ? 155 : 175,
-              crossAxisSpacing: 16,
-              mainAxisSpacing: 16,
-            ),
-          children: [
-            DashboardModuleCard(
-              icon: Icons.fact_check,
-              title: 'Attendance\nIndicator',
-              onTap: () {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    builder: (_) => const AttendanceManagementScreen(),
-                  ),
-                );
-              },
-            ),
-            DashboardModuleCard(
-              icon: Icons.meeting_room,
-              title: 'Classroom\nScheduler',
-              onTap: () {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    builder: (_) => const ClassroomManagementScreen(),
-                  ),
-                );
-              },
-            ),
-            DashboardModuleCard(
-              icon: Icons.report_problem,
-              title: 'Complaint\nManagement',
-              onTap: () {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    builder: (_) => const ComplaintListScreen(
-                      showOnlyMyComplaints: false,
-                      isFaculty: false,
-                    ),
-                  ),
-                );
-              },
-            ),
-            DashboardModuleCard(
-              icon: Icons.campaign,
-              title: 'Notice\nManagement',
-              onTap: () {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(builder: (_) => const CRNoticeScreen()),
-                );
-              },
-            ),
-          ],
-          );
-        },
+      body: SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.symmetric(
+            horizontal: 20,
+            vertical: 12,
+          ),
+          child: Column(
+            children: [
+              Expanded(
+                child: DashboardModuleCard(
+                  icon: Icons.fact_check,
+                  title: 'Attendance\nIndicator',
+                  onTap: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (_) => const AttendanceManagementScreen(),
+                      ),
+                    );
+                  },
+                ),
+              ),
+              const SizedBox(height: 12),
+              Expanded(
+                child: DashboardModuleCard(
+                  icon: Icons.meeting_room,
+                  title: 'Classroom\nScheduler',
+                  onTap: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (_) => const ClassroomManagementScreen(),
+                      ),
+                    );
+                  },
+                ),
+              ),
+              const SizedBox(height: 12),
+              Expanded(
+                child: DashboardModuleCard(
+                  icon: Icons.report_problem,
+                  title: 'Complaint\nManagement',
+                  onTap: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (_) => const ComplaintListScreen(
+                          showOnlyMyComplaints: false,
+                          isFaculty: false,
+                        ),
+                      ),
+                    );
+                  },
+                ),
+              ),
+              const SizedBox(height: 12),
+              Expanded(
+                child: DashboardModuleCard(
+                  icon: Icons.campaign,
+                  title: 'Notice\nManagement',
+                  onTap: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (_) => const CRNoticeScreen(),
+                      ),
+                    );
+                  },
+                ),
+              ),
+            ],
+          ),
+        ),
       ),
     );
   }

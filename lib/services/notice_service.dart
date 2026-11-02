@@ -48,14 +48,40 @@ class NoticeService {
     for (final file in files) {
       final bytes = file.bytes;
 
-      if (bytes == null) {
+      if (bytes == null || bytes.isEmpty) {
         throw Exception(
           'Unable to read ${file.name}. Please select the file again.',
         );
       }
 
-      final safeFileName =
-          '${DateTime.now().microsecondsSinceEpoch}_${file.name}';
+      final extension = (file.extension ?? '').toLowerCase();
+
+      final contentTypes = <String, String>{
+        'pdf': 'application/pdf',
+        'jpg': 'image/jpeg',
+        'jpeg': 'image/jpeg',
+        'png': 'image/png',
+        'gif': 'image/gif',
+        'webp': 'image/webp',
+        'txt': 'text/plain',
+        'doc': 'application/msword',
+        'docx':
+            'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+        'xls': 'application/vnd.ms-excel',
+        'xlsx':
+            'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+        'ppt': 'application/vnd.ms-powerpoint',
+        'pptx':
+            'application/vnd.openxmlformats-officedocument.presentationml.presentation',
+      };
+
+      final contentType = contentTypes[extension] ?? 'application/octet-stream';
+
+      final safeName = file.name
+          .replaceAll(RegExp(r'[/\\]'), '_')
+          .replaceAll(RegExp(r'[^a-zA-Z0-9._-]'), '_');
+
+      final safeFileName = '${DateTime.now().microsecondsSinceEpoch}_$safeName';
 
       final reference = _storage
           .ref()
@@ -64,22 +90,18 @@ class NoticeService {
           .child(safeFileName);
 
       final metadata = SettableMetadata(
-        contentType: file.extension == null ? 'application/octet-stream' : null,
+        contentType: contentType,
       );
 
-      final uploadTask = await reference.putData(
-        bytes,
-        metadata,
-      );
+      final taskSnapshot = await reference.putData(bytes, metadata);
 
-      final downloadUrl = await uploadTask.ref.getDownloadURL();
+      final downloadUrl = await taskSnapshot.ref.getDownloadURL();
 
       uploadedUrls.add(downloadUrl);
     }
 
     return uploadedUrls;
   }
-
   // ============================================================
   // CREATE NOTICE
   // ============================================================
@@ -314,20 +336,27 @@ class NoticeService {
   // GET STARRED NOTICES
   // ============================================================
 
-  static Future<List<String>> getStarredNotices(
-    String uid,
-  ) async {
+  static Future<List<String>> getStarredNotices(String uid) async {
     final userDoc = await _firestore.collection('users').doc(uid).get();
 
-    if (!userDoc.exists) {
-      return [];
-    }
+    if (!userDoc.exists) return [];
 
     final data = userDoc.data() ?? {};
+    final starredData = data['starredNotices'];
 
-    final starredNotices = data['starredNotices'] as List<dynamic>? ?? [];
+    if (starredData is List) {
+      return starredData.map((id) => id.toString()).toList();
+    }
 
-    return starredNotices.map((id) => id.toString()).toList();
+    // Support older Map-shaped data.
+    if (starredData is Map) {
+      return starredData.entries
+          .where((entry) => entry.value == true)
+          .map((entry) => entry.key.toString())
+          .toList();
+    }
+
+    return [];
   }
 
   static Future<bool> isNoticeStarred(
@@ -337,9 +366,6 @@ class NoticeService {
     final starredNotices = await getStarredNotices(uid);
     return starredNotices.contains(noticeId);
   }
-  // ============================================================
-  // STAR / UNSTAR NOTICE
-  // ============================================================
 
   static Future<void> toggleStarNotice(
     String noticeId,
@@ -355,10 +381,18 @@ class NoticeService {
       }
 
       final data = userSnapshot.data() ?? {};
+      final starredData = data['starredNotices'];
 
-      final starredNotices = List<String>.from(
-        data['starredNotices'] ?? [],
-      );
+      List<String> starredNotices = [];
+
+      if (starredData is List) {
+        starredNotices = starredData.map((id) => id.toString()).toList();
+      } else if (starredData is Map) {
+        starredNotices = starredData.entries
+            .where((entry) => entry.value == true)
+            .map((entry) => entry.key.toString())
+            .toList();
+      }
 
       if (starredNotices.contains(noticeId)) {
         starredNotices.remove(noticeId);
@@ -368,9 +402,7 @@ class NoticeService {
 
       transaction.set(
         userReference,
-        {
-          'starredNotices': starredNotices,
-        },
+        {'starredNotices': starredNotices},
         SetOptions(merge: true),
       );
     });
