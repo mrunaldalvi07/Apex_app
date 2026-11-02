@@ -33,7 +33,7 @@ class StudentDashboard extends StatelessWidget {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text("Student Dashboard"),
+        title: const Text('Student Dashboard'),
         centerTitle: true,
         actions: [
           IconButton(
@@ -45,15 +45,15 @@ class StudentDashboard extends StatelessWidget {
       body: SafeArea(
         child: Padding(
           padding: const EdgeInsets.symmetric(
-            horizontal: 20,
-            vertical: 12,
+            horizontal: 14,
+            vertical: 10,
           ),
           child: Column(
             children: [
               Expanded(
                 child: DashboardModuleCard(
                   icon: Icons.fact_check,
-                  title: 'Attendance\nIndicator',
+                  title: 'Attendance Indicator',
                   onTap: () {
                     Navigator.push(
                       context,
@@ -64,11 +64,11 @@ class StudentDashboard extends StatelessWidget {
                   },
                 ),
               ),
-              const SizedBox(height: 12),
+              const SizedBox(height: 10),
               Expanded(
                 child: DashboardModuleCard(
                   icon: Icons.meeting_room,
-                  title: 'Classroom\nScheduler',
+                  title: 'Classroom Scheduler',
                   onTap: () {
                     Navigator.push(
                       context,
@@ -79,11 +79,11 @@ class StudentDashboard extends StatelessWidget {
                   },
                 ),
               ),
-              const SizedBox(height: 12),
+              const SizedBox(height: 10),
               Expanded(
                 child: DashboardModuleCard(
                   icon: Icons.report_problem,
-                  title: 'Complaint\nManagement',
+                  title: 'Complaint Management',
                   onTap: () {
                     Navigator.push(
                       context,
@@ -94,11 +94,11 @@ class StudentDashboard extends StatelessWidget {
                   },
                 ),
               ),
-              const SizedBox(height: 12),
+              const SizedBox(height: 10),
               Expanded(
                 child: DashboardModuleCard(
                   icon: Icons.campaign,
-                  title: 'Notice\nManagement',
+                  title: 'Notice Management',
                   onTap: () {
                     Navigator.push(
                       context,

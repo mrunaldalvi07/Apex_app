@@ -1,9 +1,9 @@
-import 'package:apex_app/screens/complaint_management_screen.dart';
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 
 import '../screens/attendance_management_screen.dart';
 import '../screens/classroom_management_screen.dart';
+import '../screens/complaint_management_screen.dart';
 import '../screens/admin_notice_screen.dart';
 import '../widgets/dashboard_module_card.dart';
 
@@ -33,7 +33,7 @@ class AdminDashboard extends StatelessWidget {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text("Admin Dashboard"),
+        title: const Text('Admin Dashboard'),
         centerTitle: true,
         actions: [
           IconButton(
@@ -45,17 +45,24 @@ class AdminDashboard extends StatelessWidget {
       body: SafeArea(
         child: LayoutBuilder(
           builder: (context, constraints) {
+            const gap = 10.0;
+            const horizontalPadding = 14.0;
+            const verticalPadding = 10.0;
+
+            final cardHeight =
+                (constraints.maxHeight - verticalPadding * 2 - gap * 3) / 4;
+
             return Padding(
               padding: const EdgeInsets.symmetric(
-                horizontal: 20,
-                vertical: 12,
+                horizontal: horizontalPadding,
+                vertical: verticalPadding,
               ),
               child: Column(
                 children: [
                   Expanded(
                     child: DashboardModuleCard(
                       icon: Icons.fact_check,
-                      title: 'Attendance\nIndicator',
+                      title: 'Attendance Indicator',
                       onTap: () {
                         Navigator.push(
                           context,
@@ -66,11 +73,11 @@ class AdminDashboard extends StatelessWidget {
                       },
                     ),
                   ),
-                  const SizedBox(height: 12),
+                  const SizedBox(height: gap),
                   Expanded(
                     child: DashboardModuleCard(
                       icon: Icons.meeting_room,
-                      title: 'Classroom\nScheduler',
+                      title: 'Classroom Scheduler',
                       onTap: () {
                         Navigator.push(
                           context,
@@ -81,11 +88,11 @@ class AdminDashboard extends StatelessWidget {
                       },
                     ),
                   ),
-                  const SizedBox(height: 12),
+                  const SizedBox(height: gap),
                   Expanded(
                     child: DashboardModuleCard(
                       icon: Icons.report_problem,
-                      title: 'Complaint\nManagement',
+                      title: 'Complaint Management',
                       onTap: () {
                         Navigator.push(
                           context,
@@ -96,11 +103,11 @@ class AdminDashboard extends StatelessWidget {
                       },
                     ),
                   ),
-                  const SizedBox(height: 12),
+                  const SizedBox(height: gap),
                   Expanded(
                     child: DashboardModuleCard(
                       icon: Icons.campaign,
-                      title: 'Notice\nManagement',
+                      title: 'Notice Management',
                       onTap: () {
                         Navigator.push(
                           context,
