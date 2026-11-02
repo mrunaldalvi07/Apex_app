@@ -1,7 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
+
 import 'create_notice_screen.dart';
 import 'notice_details_screen.dart';
+import 'notifications_screen.dart';
 import '../models/notice.dart';
 import '../services/notice_service.dart';
 import 'dart:async';
@@ -99,10 +102,92 @@ class _FacultyNoticeScreenState extends State<FacultyNoticeScreen> {
     setState(() {
       starredStatus.clear();
 
-      for (final noticeId in starredNotices.keys) {
+      for (final noticeId in starredNotices) {
         starredStatus[noticeId] = true;
       }
     });
+  }
+
+  void _openNotifications() {
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => const NotificationsScreen(),
+      ),
+    );
+  }
+
+  Widget _buildNotificationBell() {
+    final user = FirebaseAuth.instance.currentUser;
+
+    if (user == null) {
+      return IconButton(
+        tooltip: "Notifications",
+        icon: const Icon(
+          Icons.notifications_none,
+          color: headingColor,
+        ),
+        onPressed: _openNotifications,
+      );
+    }
+
+    return StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
+      stream: FirebaseFirestore.instance
+          .collection('notifications')
+          .where('studentId', isEqualTo: user.uid)
+          .snapshots(),
+      builder: (context, snapshot) {
+        final unreadCount = snapshot.data?.docs.where((doc) {
+              final data = doc.data();
+
+              return data['type'] == 'notice' && data['read'] != true;
+            }).length ??
+            0;
+
+        return IconButton(
+          tooltip: "Notifications",
+          onPressed: _openNotifications,
+          icon: Stack(
+            clipBehavior: Clip.none,
+            children: [
+              const Icon(
+                Icons.notifications_none,
+                color: headingColor,
+                size: 25,
+              ),
+              if (unreadCount > 0)
+                Positioned(
+                  right: -7,
+                  top: -5,
+                  child: Container(
+                    constraints: const BoxConstraints(
+                      minWidth: 17,
+                      minHeight: 17,
+                    ),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 4,
+                      vertical: 1,
+                    ),
+                    decoration: const BoxDecoration(
+                      color: Color(0xFFD93636),
+                      shape: BoxShape.circle,
+                    ),
+                    alignment: Alignment.center,
+                    child: Text(
+                      unreadCount > 99 ? '99+' : '$unreadCount',
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontSize: 10,
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                  ),
+                ),
+            ],
+          ),
+        );
+      },
+    );
   }
 
   @override
@@ -133,6 +218,9 @@ class _FacultyNoticeScreenState extends State<FacultyNoticeScreen> {
           color: headingColor,
         ),
         actions: [
+          // Notifications
+          _buildNotificationBell(),
+
           // Starred filter
           IconButton(
             icon: Icon(
@@ -625,9 +713,8 @@ class _FacultyNoticeScreenState extends State<FacultyNoticeScreen> {
                                         ),
                                       );
 
-                                      // 📌 Pin, ✏️ Edit and
-                                      // 🗑️ Delete only appear
-                                      // for the notice owner.
+                                      // Pin, Edit and Delete only
+                                      // appear for the notice owner.
                                       if (isOwner) {
                                         items.add(
                                           PopupMenuItem<String>(

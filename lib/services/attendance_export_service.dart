@@ -2,17 +2,14 @@ import 'dart:io';
 
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:excel/excel.dart';
+import 'package:file_picker/file_picker.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:share_plus/share_plus.dart';
 
 class AttendanceExportService {
-  AttendanceExportService({
-    FirebaseFirestore? firestore,
-  }) : _firestore = firestore ?? FirebaseFirestore.instance;
+  final FirebaseFirestore _firestore = FirebaseFirestore.instance;
 
-  final FirebaseFirestore _firestore;
-
-  static const List<String> monthNames = [
+  static const List<String> months = [
     'January',
     'February',
     'March',
@@ -27,738 +24,374 @@ class AttendanceExportService {
     'December',
   ];
 
-  // ============================================================
-  // EXPORT ATTENDANCE
-  // ============================================================
+  // Converts 1, 2, 3 into 1 Year, 2 Year, 3 Year (used only for file name).
+  String _displayYear(String year) {
+    final value = year.trim().toLowerCase();
 
-  Future<String> exportAttendanceSheet({
-    required String branch,
-    required String year,
-    required String course,
-    required String month,
-  }) async {
-    final String cleanBranch = branch.trim().toUpperCase();
-    final String cleanYear = year.trim();
-    final String cleanCourse = course.trim().toUpperCase();
-    final String cleanMonth = month.trim();
+    switch (value) {
+      case '1':
+      case '1 year':
+      case 'first year':
+      case 'fy':
+        return '1 Year';
 
-    if (cleanBranch.isEmpty) {
-      throw Exception('Branch is required.');
+      case '2':
+      case '2 year':
+      case 'second year':
+      case 'sy':
+        return '2 Year';
+
+      case '3':
+      case '3 year':
+      case 'third year':
+      case 'ty':
+        return '3 Year';
+
+      default:
+        return year;
     }
+  }
 
-    if (cleanYear.isEmpty) {
-      throw Exception('Year is required.');
-    }
+  DateTime? _getDate(dynamic value) {
+    if (value is Timestamp) return value.toDate();
+    if (value is DateTime) return value;
+    return null;
+  }
 
-    if (cleanCourse.isEmpty) {
-      throw Exception('Course is required.');
-    }
+  bool _isPresent(dynamic value) {
+    if (value == true) return true;
+    if (value == false || value == null) return false;
 
-    if (!monthNames.contains(cleanMonth)) {
-      throw Exception('Invalid month: $cleanMonth');
-    }
+    final status = value.toString().trim().toLowerCase();
 
-    // ==========================================================
-    // 1. GET STUDENTS
-    // ==========================================================
+    return status == 'present' ||
+        status == 'p' ||
+        status == 'true';
+  }
 
-    final studentSnapshot = await _firestore
+  // Students: same filters as the live attendance screen.
+  Future<List<Map<String, dynamic>>> _getStudents(
+    String branch,
+    String year,
+  ) async {
+    final snapshot = await _firestore
         .collection('users')
         .where('role', isEqualTo: 'student')
-        .where('branch', isEqualTo: cleanBranch)
-        .where('year', isEqualTo: cleanYear)
+        .where('branch', isEqualTo: branch)
+        .where('year', isEqualTo: year)
         .get();
 
-    final List<Map<String, dynamic>> students = [];
+    final students = snapshot.docs.map((doc) {
+      final data = doc.data();
 
-    for (final doc in studentSnapshot.docs) {
-      students.add({
+      return {
         'id': doc.id,
-        ...doc.data(),
-      });
-    }
+        'name': data['name'] ?? '',
+        'rollNo': data['rollNo'] ?? '',
+      };
+    }).toList();
 
-    // ==========================================================
-    // 2. SORT STUDENTS
-    // ==========================================================
+    students.sort((a, b) {
+      return a['rollNo']
+          .toString()
+          .compareTo(b['rollNo'].toString());
+    });
 
-    students.sort(
-      (a, b) {
-        final String rollA = _getRollNumber(a);
-        final String rollB = _getRollNumber(b);
+    return students;
+  }
 
-        final int? numberA = int.tryParse(rollA);
-        final int? numberB = int.tryParse(rollB);
-
-        if (numberA != null && numberB != null) {
-          return numberA.compareTo(numberB);
-        }
-
-        return rollA.compareTo(rollB);
-      },
-    );
-
-    // ==========================================================
-    // 3. GET COMPLETED ATTENDANCE SESSIONS
-    // ==========================================================
-
-    final sessionSnapshot = await _firestore
+  // Sessions: same fields as saved by the live attendance screen.
+  // course is stored in UPPERCASE there, so it is queried in UPPERCASE here.
+  Future<List<Map<String, dynamic>>> _getSessions(
+    String branch,
+    String year,
+    String course,
+  ) async {
+    final snapshot = await _firestore
         .collection('live_sessions')
-        .where('branch', isEqualTo: cleanBranch)
-        .where('year', isEqualTo: cleanYear)
-        .where('course', isEqualTo: cleanCourse)
+        .where('branch', isEqualTo: branch)
+        .where('year', isEqualTo: year)
+        .where('course', isEqualTo: course.trim().toUpperCase())
         .where('status', isEqualTo: 'ended')
         .get();
 
-    final int selectedMonth = monthNames.indexOf(cleanMonth) + 1;
-
-    final List<Map<String, dynamic>> sessions = [];
-
-    for (final doc in sessionSnapshot.docs) {
+    final sessions = snapshot.docs.map((doc) {
       final data = doc.data();
 
-      final DateTime? date = _getDate(data['createdAt']);
-
-      if (date == null) {
-        continue;
-      }
-
-      if (date.month != selectedMonth) {
-        continue;
-      }
-
-      sessions.add({
+      return {
         'id': doc.id,
-        ...data,
-      });
+        'date': _getDate(data['createdAt']),
+      };
+    }).where((session) {
+      return session['date'] != null;
+    }).toList();
+
+    sessions.sort((a, b) {
+      return (a['date'] as DateTime)
+          .compareTo(b['date'] as DateTime);
+    });
+
+    return sessions;
+  }
+
+  Future<bool> _getAttendanceMark(
+    String sessionId,
+    String studentId,
+  ) async {
+    final doc = await _firestore
+        .collection('attendance')
+        .doc(sessionId)
+        .collection('students')
+        .doc(studentId)
+        .get();
+
+    if (!doc.exists) return false;
+
+    final data = doc.data() ?? {};
+
+    return _isPresent(data['status']);
+  }
+
+  // ---------------------------------------------------------------------------
+  // Styles copied from the approved Excel template.
+  // ---------------------------------------------------------------------------
+
+  CellStyle get _titleStyle => CellStyle(
+        bold: true,
+        fontSize: 16,
+        horizontalAlign: HorizontalAlign.Center,
+        verticalAlign: VerticalAlign.Center,
+      );
+
+  CellStyle get _subTitleStyle => CellStyle(
+        bold: true,
+        fontSize: 11,
+        horizontalAlign: HorizontalAlign.Center,
+        verticalAlign: VerticalAlign.Center,
+      );
+
+  CellStyle get _headerStyle => CellStyle(
+        bold: true,
+        fontSize: 11,
+        horizontalAlign: HorizontalAlign.Center,
+        verticalAlign: VerticalAlign.Center,
+        leftBorder: Border(borderStyle: BorderStyle.Thin),
+        rightBorder: Border(borderStyle: BorderStyle.Thin),
+        topBorder: Border(borderStyle: BorderStyle.Thin),
+        bottomBorder: Border(borderStyle: BorderStyle.Thin),
+      );
+
+  CellStyle get _dataStyle => CellStyle(
+        fontSize: 10,
+        horizontalAlign: HorizontalAlign.Center,
+        verticalAlign: VerticalAlign.Center,
+        leftBorder: Border(borderStyle: BorderStyle.Thin),
+        rightBorder: Border(borderStyle: BorderStyle.Thin),
+        topBorder: Border(borderStyle: BorderStyle.Thin),
+        bottomBorder: Border(borderStyle: BorderStyle.Thin),
+      );
+
+  Future<String> generateAnnualWorkbook({
+    required String branch,
+    required String year,
+    required String course,
+    Map<String, bool> editedMarks = const {},
+  }) async {
+    // Course is stored in UPPERCASE in live_sessions.
+    final courseKey = course.trim().toUpperCase();
+
+    final students = await _getStudents(branch, year);
+    final sessions = await _getSessions(branch, year, courseKey);
+
+    final excel = Excel.createExcel();
+
+    for (final month in months) {
+      final sheet = excel[month];
+
+      final monthSessions = sessions.where((session) {
+        final date = session['date'] as DateTime;
+        return date.month == months.indexOf(month) + 1;
+      }).toList();
+
+      // Template columns: Sr No | Student Name | Roll No | date columns...
+      final headers = [
+        'Sr No',
+        'Student Name',
+        'Roll No',
+        ...monthSessions.map((session) {
+          final date = session['date'] as DateTime;
+          return '${date.day}/${date.month}';
+        }),
+      ];
+
+      final lastColumn = headers.length - 1;
+
+      // Row 1: title.
+      sheet.merge(
+        CellIndex.indexByColumnRow(columnIndex: 0, rowIndex: 0),
+        CellIndex.indexByColumnRow(columnIndex: lastColumn, rowIndex: 0),
+      );
+
+      final titleCell = sheet.cell(
+        CellIndex.indexByColumnRow(columnIndex: 0, rowIndex: 0),
+      );
+      titleCell.value = TextCellValue('ATTENDANCE REGISTER - $month');
+      titleCell.cellStyle = _titleStyle;
+
+      // Row 2: branch / year / course.
+      sheet.merge(
+        CellIndex.indexByColumnRow(columnIndex: 0, rowIndex: 1),
+        CellIndex.indexByColumnRow(columnIndex: lastColumn, rowIndex: 1),
+      );
+
+      final subTitleCell = sheet.cell(
+        CellIndex.indexByColumnRow(columnIndex: 0, rowIndex: 1),
+      );
+      subTitleCell.value = TextCellValue(
+        'Branch: $branch    Year: $year    Course: $courseKey',
+      );
+      subTitleCell.cellStyle = _subTitleStyle;
+
+      // Row 3 stays blank.
+
+      // Row 4: column headings.
+      for (int col = 0; col < headers.length; col++) {
+        final cell = sheet.cell(
+          CellIndex.indexByColumnRow(columnIndex: col, rowIndex: 3),
+        );
+        cell.value = TextCellValue(headers[col]);
+        cell.cellStyle = _headerStyle;
+      }
+
+      // Row 5 onwards: student attendance data.
+      for (int row = 0; row < students.length; row++) {
+        final student = students[row];
+        final excelRow = row + 4;
+
+        final srCell = sheet.cell(
+          CellIndex.indexByColumnRow(columnIndex: 0, rowIndex: excelRow),
+        );
+        srCell.value = TextCellValue('${row + 1}');
+        srCell.cellStyle = _dataStyle;
+
+        final nameCell = sheet.cell(
+          CellIndex.indexByColumnRow(columnIndex: 1, rowIndex: excelRow),
+        );
+        nameCell.value = TextCellValue(student['name'].toString());
+        nameCell.cellStyle = _dataStyle;
+
+        final rollCell = sheet.cell(
+          CellIndex.indexByColumnRow(columnIndex: 2, rowIndex: excelRow),
+        );
+        rollCell.value = TextCellValue(student['rollNo'].toString());
+        rollCell.cellStyle = _dataStyle;
+
+        for (int col = 0; col < monthSessions.length; col++) {
+          final session = monthSessions[col];
+
+          final sessionId = session['id'].toString();
+          final studentId = student['id'].toString();
+
+          final key = '$sessionId::$studentId';
+
+          final isPresent = editedMarks.containsKey(key)
+              ? editedMarks[key]!
+              : await _getAttendanceMark(
+                  sessionId,
+                  studentId,
+                );
+
+          final markCell = sheet.cell(
+            CellIndex.indexByColumnRow(
+              columnIndex: col + 3,
+              rowIndex: excelRow,
+            ),
+          );
+          markCell.value = TextCellValue(isPresent ? 'P' : 'A');
+          markCell.cellStyle = _dataStyle;
+        }
+      }
+
+      // Column widths (same as template).
+      sheet.setColumnWidth(0, 9);
+      sheet.setColumnWidth(1, 30);
+      sheet.setColumnWidth(2, 13);
+
+      for (int col = 3; col < headers.length; col++) {
+        sheet.setColumnWidth(col, 8);
+      }
+
+      // Row heights (same as template).
+      sheet.setRowHeight(0, 28);
+      sheet.setRowHeight(1, 24);
+      sheet.setRowHeight(3, 30);
     }
 
-    // ==========================================================
-    // 4. SORT SESSIONS DATE-WISE
-    // ==========================================================
-
-    sessions.sort(
-      (a, b) {
-        final DateTime dateA = _getDate(a['createdAt']) ?? DateTime(2000);
-
-        final DateTime dateB = _getDate(b['createdAt']) ?? DateTime(2000);
-
-        return dateA.compareTo(dateB);
-      },
-    );
-
-    // ==========================================================
-    // 5. CREATE EXCEL
-    // ==========================================================
-
-    final Excel excel = Excel.createExcel();
-
+    // Remove the default empty sheet so only the 12 month sheets remain.
     if (excel.sheets.containsKey('Sheet1')) {
       excel.delete('Sheet1');
     }
 
-    final Sheet sheet = excel[cleanMonth];
+    final displayYear = _displayYear(year);
 
-    const int firstDateColumn = 3;
-    const int headerRow = 3;
+    final directory = await getApplicationDocumentsDirectory();
 
-    final int presentColumn = firstDateColumn + sessions.length;
+    final filePath =
+        '${directory.path}/APEX_Attendance_${branch}_${displayYear.replaceAll(' ', '_')}_${courseKey.replaceAll(' ', '_')}.xlsx';
 
-    final int absentColumn = presentColumn + 1;
+    final bytes = excel.encode();
 
-    final int percentageColumn = presentColumn + 2;
-
-    final int statusColumn = presentColumn + 3;
-
-    final int lastColumn = statusColumn;
-
-    // ==========================================================
-    // 6. TITLE
-    // ==========================================================
-
-    sheet.merge(
-      CellIndex.indexByColumnRow(
-        columnIndex: 0,
-        rowIndex: 0,
-      ),
-      CellIndex.indexByColumnRow(
-        columnIndex: lastColumn,
-        rowIndex: 0,
-      ),
-    );
-
-    final titleCell = sheet.cell(
-      CellIndex.indexByColumnRow(
-        columnIndex: 0,
-        rowIndex: 0,
-      ),
-    );
-
-    titleCell.value = TextCellValue('ATTENDANCE REPORT');
-
-    titleCell.cellStyle = _titleStyle();
-
-    // ==========================================================
-    // 7. INFORMATION
-    // ==========================================================
-
-    sheet.merge(
-      CellIndex.indexByColumnRow(
-        columnIndex: 0,
-        rowIndex: 1,
-      ),
-      CellIndex.indexByColumnRow(
-        columnIndex: lastColumn,
-        rowIndex: 1,
-      ),
-    );
-
-    final infoCell = sheet.cell(
-      CellIndex.indexByColumnRow(
-        columnIndex: 0,
-        rowIndex: 1,
-      ),
-    );
-
-    infoCell.value = TextCellValue(
-      'Branch: $cleanBranch    '
-      'Year: $cleanYear    '
-      'Course: $cleanCourse    '
-      'Month: $cleanMonth',
-    );
-
-    infoCell.cellStyle = _infoStyle();
-
-    // ==========================================================
-    // 8. HEADERS
-    // ==========================================================
-
-    _setCell(
-      sheet,
-      0,
-      headerRow,
-      'Sr No',
-      _headerStyle(),
-    );
-
-    _setCell(
-      sheet,
-      1,
-      headerRow,
-      'Roll No',
-      _headerStyle(),
-    );
-
-    _setCell(
-      sheet,
-      2,
-      headerRow,
-      'Name',
-      _headerStyle(),
-    );
-
-    // DATE-WISE HEADERS
-    for (int i = 0; i < sessions.length; i++) {
-      final DateTime? date = _getDate(sessions[i]['createdAt']);
-
-      String dateText = '-';
-
-      if (date != null) {
-        dateText = '${date.day.toString().padLeft(2, '0')}-'
-            '${date.month.toString().padLeft(2, '0')}-'
-            '${date.year}';
-      }
-
-      _setCell(
-        sheet,
-        firstDateColumn + i,
-        headerRow,
-        dateText,
-        _headerStyle(),
-      );
+    if (bytes == null) {
+      throw Exception('Unable to generate Excel workbook.');
     }
 
-    _setCell(
-      sheet,
-      presentColumn,
-      headerRow,
-      'Present',
-      _headerStyle(),
-    );
+    final file = File(filePath);
 
-    _setCell(
-      sheet,
-      absentColumn,
-      headerRow,
-      'Absent',
-      _headerStyle(),
-    );
+    // Overwrite the same working file on every update.
+    await file.writeAsBytes(bytes, flush: true);
 
-    _setCell(
-      sheet,
-      percentageColumn,
-      headerRow,
-      'Attendance %',
-      _headerStyle(),
-    );
-
-    _setCell(
-      sheet,
-      statusColumn,
-      headerRow,
-      'Status',
-      _headerStyle(),
-    );
-
-    // ==========================================================
-    // 9. STUDENT DATA
-    // ==========================================================
-
-    for (int studentIndex = 0; studentIndex < students.length; studentIndex++) {
-      final Map<String, dynamic> student = students[studentIndex];
-
-      final int row = headerRow + 1 + studentIndex;
-
-      final String studentId = (student['id'] ?? '').toString();
-
-      final String rollNo = _getRollNumber(student);
-
-      final String name = _getStudentName(student);
-
-      int presentCount = 0;
-      int absentCount = 0;
-
-      // --------------------------------------------------------
-      // BASIC DETAILS
-      // --------------------------------------------------------
-
-      _setCell(
-        sheet,
-        0,
-        row,
-        '${studentIndex + 1}',
-        _bodyStyle(),
-      );
-
-      _setCell(
-        sheet,
-        1,
-        row,
-        rollNo,
-        _bodyStyle(),
-      );
-
-      _setCell(
-        sheet,
-        2,
-        row,
-        name,
-        _bodyStyle(),
-      );
-
-      // --------------------------------------------------------
-      // DATE-WISE P / A
-      // --------------------------------------------------------
-
-      for (int sessionIndex = 0;
-          sessionIndex < sessions.length;
-          sessionIndex++) {
-        final String sessionId =
-            (sessions[sessionIndex]['id'] ?? '').toString();
-
-        final String mark = await _getAttendanceMark(
-          sessionId: sessionId,
-          studentId: studentId,
-        );
-
-        // P = Present
-        if (mark == 'P') {
-          presentCount++;
-        }
-
-        // A = Absent
-        else {
-          absentCount++;
-        }
-
-        _setCell(
-          sheet,
-          firstDateColumn + sessionIndex,
-          row,
-          mark,
-          _bodyStyle(),
-        );
-      }
-
-      // --------------------------------------------------------
-      // ATTENDANCE PERCENTAGE
-      // --------------------------------------------------------
-
-      final int totalClasses = sessions.length;
-
-      final double percentage =
-          totalClasses == 0 ? 0 : (presentCount / totalClasses) * 100;
-
-      final String status = percentage >= 75 ? 'Regular' : 'Detained';
-
-      // --------------------------------------------------------
-      // SUMMARY
-      // --------------------------------------------------------
-
-      _setCell(
-        sheet,
-        presentColumn,
-        row,
-        presentCount.toString(),
-        _bodyStyle(),
-      );
-
-      _setCell(
-        sheet,
-        absentColumn,
-        row,
-        absentCount.toString(),
-        _bodyStyle(),
-      );
-
-      _setCell(
-        sheet,
-        percentageColumn,
-        row,
-        percentage.toStringAsFixed(2),
-        _bodyStyle(),
-      );
-
-      _setCell(
-        sheet,
-        statusColumn,
-        row,
-        status,
-        _bodyStyle(),
-      );
-    }
-
-    // ==========================================================
-    // 10. COLUMN WIDTHS
-    // ==========================================================
-
-    sheet.setColumnWidth(0, 8);
-    sheet.setColumnWidth(1, 12);
-    sheet.setColumnWidth(2, 28);
-
-    for (int i = 0; i < sessions.length; i++) {
-      sheet.setColumnWidth(
-        firstDateColumn + i,
-        14,
-      );
-    }
-
-    sheet.setColumnWidth(
-      presentColumn,
-      12,
-    );
-
-    sheet.setColumnWidth(
-      absentColumn,
-      12,
-    );
-
-    sheet.setColumnWidth(
-      percentageColumn,
-      16,
-    );
-
-    sheet.setColumnWidth(
-      statusColumn,
-      14,
-    );
-
-    // ==========================================================
-    // 11. ROW HEIGHTS
-    // ==========================================================
-
-    sheet.setRowHeight(0, 28);
-    sheet.setRowHeight(1, 24);
-    sheet.setRowHeight(headerRow, 32);
-
-    for (int i = 0; i < students.length; i++) {
-      sheet.setRowHeight(
-        headerRow + 1 + i,
-        24,
-      );
-    }
-
-    // ==========================================================
-    // 12. SAVE EXCEL
-    // ==========================================================
-
-    final Directory directory = await getApplicationDocumentsDirectory();
-
-    final String fileName =
-        '${cleanYear}_${cleanBranch}_${cleanCourse.replaceAll(' ', '_')}_Attendance.xlsx';
-
-    final String filePath = '${directory.path}/$fileName';
-
-    final List<int>? bytes = excel.encode();
-
-    if (bytes == null || bytes.isEmpty) {
-      throw Exception(
-        'Excel file could not be generated.',
-      );
-    }
-
-    final File file = File(filePath);
-
-    await file.writeAsBytes(
-      bytes,
-      flush: true,
-    );
-
-    return filePath;
+    return file.path;
   }
 
-  // ============================================================
-  // GET ATTENDANCE MARK
-  // ============================================================
-
-  Future<String> _getAttendanceMark({
-    required String sessionId,
-    required String studentId,
-  }) async {
-    try {
-      final DocumentSnapshot<Map<String, dynamic>> doc = await _firestore
-          .collection('attendance')
-          .doc(sessionId)
-          .collection('students')
-          .doc(studentId)
-          .get();
-
-      // No record = ABSENT
-      if (!doc.exists) {
-        return 'A';
-      }
-
-      final Map<String, dynamic>? data = doc.data();
-
-      if (data == null) {
-        return 'A';
-      }
-
-      final dynamic status = data['status'];
-
-      // PRESENT
-      if (status == 'Present' ||
-          status == 'present' ||
-          status == 'P' ||
-          status == true) {
-        return 'P';
-      }
-
-      // Everything else = ABSENT
-      return 'A';
-    } catch (_) {
-      // If attendance cannot be found,
-      // treat the student as absent.
-      return 'A';
-    }
-  }
-
-  // ============================================================
-  // SET CELL
-  // ============================================================
-
-  void _setCell(
-    Sheet sheet,
-    int column,
-    int row,
-    String value,
-    CellStyle style,
-  ) {
-    final Data cell = sheet.cell(
-      CellIndex.indexByColumnRow(
-        columnIndex: column,
-        rowIndex: row,
-      ),
-    );
-
-    cell.value = TextCellValue(value);
-    cell.cellStyle = style;
-  }
-
-  // ============================================================
-  // STUDENT NAME
-  // ============================================================
-
-  String _getStudentName(
-    Map<String, dynamic> student,
-  ) {
-    final dynamic name = student['name'];
-
-    if (name != null && name.toString().trim().isNotEmpty) {
-      return name.toString().trim();
-    }
-
-    final dynamic displayName = student['displayName'];
-
-    if (displayName != null && displayName.toString().trim().isNotEmpty) {
-      return displayName.toString().trim();
-    }
-
-    final dynamic fullName = student['fullName'];
-
-    if (fullName != null && fullName.toString().trim().isNotEmpty) {
-      return fullName.toString().trim();
-    }
-
-    return 'Unknown Student';
-  }
-
-  // ============================================================
-  // ROLL NUMBER
-  // ============================================================
-
-  String _getRollNumber(
-    Map<String, dynamic> student,
-  ) {
-    final dynamic roll =
-        student['rollNo'] ?? student['rollNumber'] ?? student['roll'];
-
-    if (roll == null) {
-      return '';
-    }
-
-    return roll.toString().trim();
-  }
-
-  // ============================================================
-  // DATE
-  // ============================================================
-
-  DateTime? _getDate(dynamic value) {
-    if (value is Timestamp) {
-      return value.toDate();
-    }
-
-    if (value is DateTime) {
-      return value;
-    }
-
-    return null;
-  }
-
-  // ============================================================
-  // TITLE STYLE
-  // ============================================================
-
-  CellStyle _titleStyle() {
-    return CellStyle(
-      bold: true,
-      fontSize: 16,
-      horizontalAlign: HorizontalAlign.Center,
-      verticalAlign: VerticalAlign.Center,
-    );
-  }
-
-  // ============================================================
-  // INFO STYLE
-  // ============================================================
-
-  CellStyle _infoStyle() {
-    return CellStyle(
-      bold: true,
-      fontSize: 11,
-      horizontalAlign: HorizontalAlign.Center,
-      verticalAlign: VerticalAlign.Center,
-      textWrapping: TextWrapping.WrapText,
-    );
-  }
-
-  // ============================================================
-  // HEADER STYLE
-  // ============================================================
-
-  CellStyle _headerStyle() {
-    return CellStyle(
-      bold: true,
-      fontSize: 11,
-      horizontalAlign: HorizontalAlign.Center,
-      verticalAlign: VerticalAlign.Center,
-      textWrapping: TextWrapping.WrapText,
-      leftBorder: Border(
-        borderStyle: BorderStyle.Thin,
-      ),
-      rightBorder: Border(
-        borderStyle: BorderStyle.Thin,
-      ),
-      topBorder: Border(
-        borderStyle: BorderStyle.Thin,
-      ),
-      bottomBorder: Border(
-        borderStyle: BorderStyle.Thin,
-      ),
-    );
-  }
-
-  // ============================================================
-  // BODY STYLE
-  // ============================================================
-
-  CellStyle _bodyStyle() {
-    return CellStyle(
-      fontSize: 10,
-      horizontalAlign: HorizontalAlign.Center,
-      verticalAlign: VerticalAlign.Center,
-      textWrapping: TextWrapping.WrapText,
-      leftBorder: Border(
-        borderStyle: BorderStyle.Thin,
-      ),
-      rightBorder: Border(
-        borderStyle: BorderStyle.Thin,
-      ),
-      topBorder: Border(
-        borderStyle: BorderStyle.Thin,
-      ),
-      bottomBorder: Border(
-        borderStyle: BorderStyle.Thin,
-      ),
-    );
-  }
-
-  // ============================================================
-  // SHARE ATTENDANCE SHEET
-  // ============================================================
-
-  Future<void> shareAttendanceSheet({
-    required String branch,
-    required String year,
-    required String course,
-    required String month,
-  }) async {
-    final String filePath = await exportAttendanceSheet(
-      branch: branch,
-      year: year,
-      course: course,
-      month: month,
-    );
-
-    final File file = File(filePath);
+  Future<void> downloadWorkbook(String filePath) async {
+    final file = File(filePath);
 
     if (!await file.exists()) {
-      throw Exception(
-        'Attendance Excel file was not created.',
-      );
+      throw Exception('Workbook not found. Generate Preview first.');
     }
 
-    await Share.shareXFiles(
-      [
-        XFile(filePath),
-      ],
-      subject: 'Attendance Report - $course',
-      text: 'Attendance Report\n'
-          'Branch: $branch\n'
-          'Year: $year\n'
-          'Course: $course\n'
-          'Month: $month',
+    final bytes = await file.readAsBytes();
+
+    final savedPath = await FilePicker.saveFile(
+      dialogTitle: 'Save APEX Attendance Workbook',
+      fileName: 'APEX_Attendance.xlsx',
+      type: FileType.custom,
+      allowedExtensions: ['xlsx'],
+      bytes: bytes,
+    );
+
+    if (savedPath == null) return;
+  }
+
+  Future<void> shareWorkbook(String filePath) async {
+    final file = File(filePath);
+
+    if (!await file.exists()) {
+      throw Exception('Workbook not found. Generate Preview first.');
+    }
+
+    await SharePlus.instance.share(
+      ShareParams(
+        files: [
+          XFile(
+            filePath,
+            mimeType:
+                'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+          ),
+        ],
+        subject: 'APEX Attendance Report',
+        text: 'APEX Annual Attendance Workbook',
+      ),
     );
   }
 }

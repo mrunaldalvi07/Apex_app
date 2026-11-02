@@ -9,15 +9,13 @@ class ClassroomScreen extends StatefulWidget {
 }
 
 class _ClassroomScreenState extends State<ClassroomScreen> {
-  final TextEditingController _searchController =
-      TextEditingController();
+  final TextEditingController _searchController = TextEditingController();
 
   final FocusNode _searchFocusNode = FocusNode();
 
   // Used only for search filtering.
   // This avoids rebuilding the whole StreamBuilder while typing.
-  final ValueNotifier<String> _searchTextNotifier =
-      ValueNotifier<String>("");
+  final ValueNotifier<String> _searchTextNotifier = ValueNotifier<String>("");
 
   String _selectedFilter = "ALL";
 
@@ -56,10 +54,7 @@ class _ClassroomScreenState extends State<ClassroomScreen> {
       resizeToAvoidBottomInset: true,
 
       body: StreamBuilder<QuerySnapshot>(
-        stream: FirebaseFirestore.instance
-            .collection('classrooms')
-            .snapshots(),
-
+        stream: FirebaseFirestore.instance.collection('classrooms').snapshots(),
         builder: (context, snapshot) {
           if (snapshot.hasError) {
             return const Center(
@@ -73,8 +68,7 @@ class _ClassroomScreenState extends State<ClassroomScreen> {
             );
           }
 
-          if (snapshot.connectionState ==
-              ConnectionState.waiting) {
+          if (snapshot.connectionState == ConnectionState.waiting) {
             return const Center(
               child: CircularProgressIndicator(
                 color: primaryNavy,
@@ -105,20 +99,14 @@ class _ClassroomScreenState extends State<ClassroomScreen> {
           int bookedCount = 0;
 
           for (final doc in classrooms) {
-            final data =
-                doc.data() as Map<String, dynamic>;
+            final data = doc.data() as Map<String, dynamic>;
 
             final status =
-                data['status']
-                        ?.toString()
-                        .trim()
-                        .toUpperCase() ??
-                    "";
+                data['status']?.toString().trim().toUpperCase() ?? "";
 
             if (status == "FREE") {
               freeCount++;
-            } else if (status ==
-                "TEMPORARILY RESERVED") {
+            } else if (status == "TEMPORARILY RESERVED") {
               temporaryCount++;
             } else if (status == "BOOKED") {
               bookedCount++;
@@ -131,7 +119,8 @@ class _ClassroomScreenState extends State<ClassroomScreen> {
 
           return LayoutBuilder(
             builder: (context, constraints) {
-              return Center(
+              return Align(
+                alignment: Alignment.topCenter,
                 child: ConstrainedBox(
                   constraints: const BoxConstraints(
                     maxWidth: 1100,
@@ -144,75 +133,54 @@ class _ClassroomScreenState extends State<ClassroomScreen> {
                   child: SingleChildScrollView(
                     keyboardDismissBehavior:
                         ScrollViewKeyboardDismissBehavior.manual,
-
                     padding: const EdgeInsets.only(
                       bottom: 20,
                     ),
-
                     child: Column(
                       children: [
-
                         // --------------------------------------------------
                         // BLUE GRADIENT HEADER
                         // --------------------------------------------------
 
                         Padding(
-                          padding:
-                              const EdgeInsets.fromLTRB(
+                          padding: const EdgeInsets.fromLTRB(
                             12,
                             12,
                             12,
                             6,
                           ),
-
                           child: Container(
                             width: double.infinity,
-                            padding:
-                                const EdgeInsets.all(18),
-
+                            padding: const EdgeInsets.all(18),
                             decoration: BoxDecoration(
-                              gradient:
-                                  const LinearGradient(
+                              gradient: const LinearGradient(
                                 colors: [
                                   darkNavy,
                                   primaryNavy,
                                 ],
-                                begin:
-                                    Alignment.centerLeft,
-                                end:
-                                    Alignment.centerRight,
+                                begin: Alignment.centerLeft,
+                                end: Alignment.centerRight,
                               ),
-
-                              borderRadius:
-                                  BorderRadius.circular(17),
+                              borderRadius: BorderRadius.circular(17),
                             ),
-
                             child: Column(
-                              crossAxisAlignment:
-                                  CrossAxisAlignment.start,
-
+                              crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
                                 const Text(
                                   "Classroom Overview",
-
                                   style: TextStyle(
                                     color: Colors.white,
                                     fontSize: 21,
-                                    fontWeight:
-                                        FontWeight.bold,
+                                    fontWeight: FontWeight.bold,
                                   ),
                                 ),
-
                                 const SizedBox(height: 5),
-
                                 Text(
                                   "$freeCount Free  •  "
                                   "$temporaryCount Temporary  •  "
                                   "$bookedCount Booked",
-
                                   style: TextStyle(
-                                    color: Colors.white
-                                        .withOpacity(0.9),
+                                    color: Colors.white.withOpacity(0.9),
                                     fontSize: 14,
                                   ),
                                 ),
@@ -226,14 +194,12 @@ class _ClassroomScreenState extends State<ClassroomScreen> {
                         // --------------------------------------------------
 
                         Padding(
-                          padding:
-                              const EdgeInsets.fromLTRB(
+                          padding: const EdgeInsets.fromLTRB(
                             12,
                             6,
                             12,
                             6,
                           ),
-
                           child: Row(
                             children: [
                               Expanded(
@@ -241,32 +207,25 @@ class _ClassroomScreenState extends State<ClassroomScreen> {
                                   title: "FREE",
                                   count: freeCount,
                                   color: Colors.green,
-                                  icon:
-                                      Icons.check_circle,
+                                  icon: Icons.check_circle,
                                 ),
                               ),
-
                               const SizedBox(width: 8),
-
                               Expanded(
                                 child: _countCard(
                                   title: "TEMPORARY",
                                   count: temporaryCount,
                                   color: Colors.orange,
-                                  icon:
-                                      Icons.access_time,
+                                  icon: Icons.access_time,
                                 ),
                               ),
-
                               const SizedBox(width: 8),
-
                               Expanded(
                                 child: _countCard(
                                   title: "BOOKED",
                                   count: bookedCount,
                                   color: Colors.red,
-                                  icon:
-                                      Icons.event_busy,
+                                  icon: Icons.event_busy,
                                 ),
                               ),
                             ],
@@ -278,112 +237,79 @@ class _ClassroomScreenState extends State<ClassroomScreen> {
                         // --------------------------------------------------
 
                         Padding(
-                          padding:
-                              const EdgeInsets.symmetric(
+                          padding: const EdgeInsets.symmetric(
                             horizontal: 12,
                             vertical: 6,
                           ),
-
                           child: TextField(
-                            controller:
-                                _searchController,
+                            controller: _searchController,
 
-                            focusNode:
-                                _searchFocusNode,
+                            focusNode: _searchFocusNode,
 
                             // IMPORTANT:
                             // No setState here.
                             // This keeps the search input stable
                             // while typing.
                             onChanged: (value) {
-                              _searchTextNotifier.value =
-                                  value;
+                              _searchTextNotifier.value = value;
                             },
 
-                            decoration:
-                                InputDecoration(
-                              hintText:
-                                  "Search classroom number",
-
-                              prefixIcon:
-                                  const Icon(
+                            decoration: InputDecoration(
+                              hintText: "Search classroom number",
+                              prefixIcon: const Icon(
                                 Icons.search,
                                 color: darkNavy,
                               ),
-
-                              suffixIcon:
-                                  ValueListenableBuilder<
-                                      String>(
-                                valueListenable:
-                                    _searchTextNotifier,
-
+                              suffixIcon: ValueListenableBuilder<String>(
+                                valueListenable: _searchTextNotifier,
                                 builder: (
                                   context,
                                   searchText,
                                   child,
                                 ) {
                                   if (searchText.isEmpty) {
-                                    return const SizedBox
-                                        .shrink();
+                                    return const SizedBox.shrink();
                                   }
 
                                   return IconButton(
-                                    icon:
-                                        const Icon(
+                                    icon: const Icon(
                                       Icons.clear,
                                       color: darkNavy,
                                     ),
-
                                     onPressed: () {
-                                      _searchController
-                                          .clear();
+                                      _searchController.clear();
 
-                                      _searchTextNotifier
-                                          .value = "";
+                                      _searchTextNotifier.value = "";
 
                                       // Keep search field active.
-                                      _searchFocusNode
-                                          .requestFocus();
+                                      _searchFocusNode.requestFocus();
                                     },
                                   );
                                 },
                               ),
-
                               filled: true,
                               fillColor: Colors.white,
-
-                              border:
-                                  OutlineInputBorder(
-                                borderRadius:
-                                    BorderRadius.circular(
+                              border: OutlineInputBorder(
+                                borderRadius: BorderRadius.circular(
                                   14,
                                 ),
-                                borderSide:
-                                    BorderSide(
+                                borderSide: BorderSide(
                                   color: Colors.grey.shade300,
                                 ),
                               ),
-
-                              enabledBorder:
-                                  OutlineInputBorder(
-                                borderRadius:
-                                    BorderRadius.circular(
+                              enabledBorder: OutlineInputBorder(
+                                borderRadius: BorderRadius.circular(
                                   14,
                                 ),
-                                borderSide:
-                                    BorderSide(
+                                borderSide: BorderSide(
                                   color: Colors.grey.shade300,
                                 ),
                               ),
-
-                              focusedBorder:
-                                  OutlineInputBorder(
-                                borderRadius:
-                                    BorderRadius.circular(
+                              focusedBorder: OutlineInputBorder(
+                                borderRadius: BorderRadius.circular(
                                   14,
                                 ),
-                                borderSide:
-                                    const BorderSide(
+                                borderSide: const BorderSide(
                                   color: primaryNavy,
                                   width: 2,
                                 ),
@@ -397,31 +323,21 @@ class _ClassroomScreenState extends State<ClassroomScreen> {
                         // --------------------------------------------------
 
                         SingleChildScrollView(
-                          scrollDirection:
-                              Axis.horizontal,
-
-                          padding:
-                              const EdgeInsets.symmetric(
+                          scrollDirection: Axis.horizontal,
+                          padding: const EdgeInsets.symmetric(
                             horizontal: 12,
                             vertical: 5,
                           ),
-
                           child: Row(
                             children: [
                               _filterButton("ALL"),
-
                               const SizedBox(width: 8),
-
                               _filterButton("FREE"),
-
                               const SizedBox(width: 8),
-
                               _filterButton(
                                 "TEMPORARILY RESERVED",
                               ),
-
                               const SizedBox(width: 8),
-
                               _filterButton("BOOKED"),
                             ],
                           ),
@@ -434,79 +350,54 @@ class _ClassroomScreenState extends State<ClassroomScreen> {
                         // --------------------------------------------------
 
                         ValueListenableBuilder<String>(
-                          valueListenable:
-                              _searchTextNotifier,
-
+                          valueListenable: _searchTextNotifier,
                           builder: (
                             context,
                             searchText,
                             child,
                           ) {
-                            final search = searchText
-                                .trim()
-                                .toLowerCase();
+                            final search = searchText.trim().toLowerCase();
 
-                            final filteredClassrooms =
-                                classrooms.where((doc) {
-                              final data =
-                                  doc.data()
-                                      as Map<String,
-                                          dynamic>;
+                            final filteredClassrooms = classrooms.where((doc) {
+                              final data = doc.data() as Map<String, dynamic>;
 
                               final roomNo =
-                                  data['roomNo']
-                                          ?.toString()
-                                          .toLowerCase() ??
+                                  data['roomNo']?.toString().toLowerCase() ??
                                       "";
 
-                              final status =
-                                  data['status']
-                                          ?.toString()
-                                          .trim()
-                                          .toUpperCase() ??
-                                      "";
+                              final status = data['status']
+                                      ?.toString()
+                                      .trim()
+                                      .toUpperCase() ??
+                                  "";
 
-                              final matchesSearch =
-                                  roomNo.contains(search);
+                              final matchesSearch = roomNo.contains(search);
 
                               bool matchesFilter = true;
 
-                              if (_selectedFilter ==
-                                  "FREE") {
-                                matchesFilter =
-                                    status == "FREE";
+                              if (_selectedFilter == "FREE") {
+                                matchesFilter = status == "FREE";
                               } else if (_selectedFilter ==
                                   "TEMPORARILY RESERVED") {
                                 matchesFilter =
-                                    status ==
-                                        "TEMPORARILY RESERVED";
-                              } else if (_selectedFilter ==
-                                  "BOOKED") {
-                                matchesFilter =
-                                    status == "BOOKED";
+                                    status == "TEMPORARILY RESERVED";
+                              } else if (_selectedFilter == "BOOKED") {
+                                matchesFilter = status == "BOOKED";
                               }
 
-                              return matchesSearch &&
-                                  matchesFilter;
+                              return matchesSearch && matchesFilter;
                             }).toList();
 
-                            if (filteredClassrooms
-                                .isEmpty) {
+                            if (filteredClassrooms.isEmpty) {
                               return const Padding(
-                                padding:
-                                    EdgeInsets.all(30),
-
+                                padding: EdgeInsets.all(30),
                                 child: Center(
                                   child: Text(
                                     "No classrooms match your search/filter",
-
-                                    textAlign:
-                                        TextAlign.center,
-
+                                    textAlign: TextAlign.center,
                                     style: TextStyle(
                                       color: darkNavy,
-                                      fontWeight:
-                                          FontWeight.w500,
+                                      fontWeight: FontWeight.w500,
                                     ),
                                   ),
                                 ),
@@ -522,38 +413,23 @@ class _ClassroomScreenState extends State<ClassroomScreen> {
                             // independently.
                             return ListView.builder(
                               shrinkWrap: true,
-
-                              physics:
-                                  const NeverScrollableScrollPhysics(),
-
-                              itemCount:
-                                  filteredClassrooms.length,
-
-                              itemBuilder:
-                                  (context, index) {
-                                final classroom =
-                                    filteredClassrooms[
-                                            index]
-                                        .data()
-                                        as Map<String,
-                                            dynamic>;
+                              physics: const NeverScrollableScrollPhysics(),
+                              itemCount: filteredClassrooms.length,
+                              itemBuilder: (context, index) {
+                                final classroom = filteredClassrooms[index]
+                                    .data() as Map<String, dynamic>;
 
                                 final roomNo =
-                                    classroom['roomNo']
-                                            ?.toString() ??
-                                        "N/A";
+                                    classroom['roomNo']?.toString() ?? "N/A";
 
-                                final status =
-                                    classroom['status']
-                                            ?.toString()
-                                            .trim()
-                                            .toUpperCase() ??
-                                        "UNKNOWN";
+                                final status = classroom['status']
+                                        ?.toString()
+                                        .trim()
+                                        .toUpperCase() ??
+                                    "UNKNOWN";
 
                                 final course =
-                                    classroom['course']
-                                            ?.toString() ??
-                                        "";
+                                    classroom['course']?.toString() ?? "";
 
                                 // --------------------------------------------------
                                 // STATUS COLORS
@@ -563,27 +439,17 @@ class _ClassroomScreenState extends State<ClassroomScreen> {
                                 IconData statusIcon;
 
                                 if (status == "FREE") {
-                                  statusColor =
-                                      Colors.green;
-                                  statusIcon =
-                                      Icons.check_circle;
-                                } else if (status ==
-                                    "TEMPORARILY RESERVED") {
-                                  statusColor =
-                                      Colors.orange;
-                                  statusIcon =
-                                      Icons.access_time;
-                                } else if (status ==
-                                    "BOOKED") {
-                                  statusColor =
-                                      Colors.red;
-                                  statusIcon =
-                                      Icons.event_busy;
-                                } else {
-                                  statusColor =
-                                      primaryNavy;
-                                  statusIcon =
-                                      Icons.help_outline;
+                                  statusColor = Colors.green;
+                                  statusIcon = Icons.check_circle;
+                                } else if (status == "TEMPORARILY RESERVED") {
+                                  statusColor = Colors.orange;
+                                  statusIcon = Icons.access_time;
+                                } else if (status == "BOOKED") {
+                                  statusColor = Colors.red;
+                                  statusIcon = Icons.event_busy;
+                              } else {
+                                  statusColor = primaryNavy;
+                                  statusIcon = Icons.help_outline;
                                 }
 
                                 // --------------------------------------------------
@@ -591,77 +457,43 @@ class _ClassroomScreenState extends State<ClassroomScreen> {
                                 // --------------------------------------------------
 
                                 return Card(
-                                  margin:
-                                      const EdgeInsets
-                                          .symmetric(
+                                  margin: const EdgeInsets.symmetric(
                                     horizontal: 12,
                                     vertical: 6,
                                   ),
-
                                   elevation: 2,
-
                                   color: Colors.white,
-
-                                  shape:
-                                      RoundedRectangleBorder(
-                                    borderRadius:
-                                        BorderRadius
-                                            .circular(17),
+                                  shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(17),
                                   ),
-
                                   child: Padding(
-                                    padding:
-                                        const EdgeInsets
-                                            .all(14),
-
+                                    padding: const EdgeInsets.all(14),
                                     child: Column(
                                       crossAxisAlignment:
-                                          CrossAxisAlignment
-                                              .start,
-
+                                          CrossAxisAlignment.start,
                                       children: [
-
                                         // --------------------------------------------------
                                         // ROOM HEADER
                                         // --------------------------------------------------
 
                                         Container(
-                                          width:
-                                              double.infinity,
-
-                                          padding:
-                                              const EdgeInsets
-                                                  .symmetric(
+                                          width: double.infinity,
+                                          padding: const EdgeInsets.symmetric(
                                             vertical: 15,
                                           ),
-
-                                          decoration:
-                                              BoxDecoration(
-                                            color:
-                                                statusColor,
-
-                                            borderRadius:
-                                                BorderRadius
-                                                    .circular(
+                                          decoration: BoxDecoration(
+                                            color: statusColor,
+                                            borderRadius: BorderRadius.circular(
                                               12,
                                             ),
                                           ),
-
                                           child: Text(
                                             "ROOM $roomNo",
-
-                                            textAlign:
-                                                TextAlign
-                                                    .center,
-
-                                            style:
-                                                const TextStyle(
-                                              color:
-                                                  Colors.white,
+                                            textAlign: TextAlign.center,
+                                            style: const TextStyle(
+                                              color: Colors.white,
                                               fontSize: 21,
-                                              fontWeight:
-                                                  FontWeight
-                                                      .bold,
+                                              fontWeight: FontWeight.bold,
                                             ),
                                           ),
                                         ),
@@ -673,14 +505,10 @@ class _ClassroomScreenState extends State<ClassroomScreen> {
                                         if (course.isNotEmpty)
                                           Text(
                                             "Course: $course",
-
-                                            style:
-                                                const TextStyle(
+                                            style: const TextStyle(
                                               fontSize: 16,
                                               color: darkNavy,
-                                              fontWeight:
-                                                  FontWeight
-                                                      .w500,
+                                              fontWeight: FontWeight.w500,
                                             ),
                                           ),
 
@@ -697,28 +525,19 @@ class _ClassroomScreenState extends State<ClassroomScreen> {
                                           children: [
                                             Icon(
                                               statusIcon,
-                                              color:
-                                                  statusColor,
+                                              color: statusColor,
                                               size: 20,
                                             ),
-
                                             const SizedBox(
                                               width: 7,
                                             ),
-
                                             Expanded(
                                               child: Text(
                                                 "Status: $status",
-
-                                                style:
-                                                    TextStyle(
-                                                  fontSize:
-                                                      15,
-                                                  fontWeight:
-                                                      FontWeight
-                                                          .bold,
-                                                  color:
-                                                      statusColor,
+                                                style: TextStyle(
+                                                  fontSize: 15,
+                                                  fontWeight: FontWeight.bold,
+                                                  color: statusColor,
                                                 ),
                                               ),
                                             ),
@@ -759,11 +578,9 @@ class _ClassroomScreenState extends State<ClassroomScreen> {
         vertical: 12,
         horizontal: 6,
       ),
-
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(15),
-
         boxShadow: [
           BoxShadow(
             color: Colors.black.withOpacity(0.06),
@@ -772,18 +589,14 @@ class _ClassroomScreenState extends State<ClassroomScreen> {
           ),
         ],
       ),
-
       child: Column(
         children: [
-
           Icon(
             icon,
             color: color,
             size: 24,
           ),
-
           const SizedBox(height: 4),
-
           Text(
             "$count",
             style: TextStyle(
@@ -792,7 +605,6 @@ class _ClassroomScreenState extends State<ClassroomScreen> {
               color: color,
             ),
           ),
-
           Text(
             title,
             textAlign: TextAlign.center,
@@ -812,8 +624,7 @@ class _ClassroomScreenState extends State<ClassroomScreen> {
   // --------------------------------------------------
 
   Widget _filterButton(String filter) {
-    final isSelected =
-        _selectedFilter == filter;
+    final isSelected = _selectedFilter == filter;
 
     String displayText;
 
@@ -821,8 +632,7 @@ class _ClassroomScreenState extends State<ClassroomScreen> {
       displayText = "All";
     } else if (filter == "FREE") {
       displayText = "Free";
-    } else if (filter ==
-        "TEMPORARILY RESERVED") {
+    } else if (filter == "TEMPORARILY RESERVED") {
       displayText = "Temporary Reserved";
     } else {
       displayText = "Booked";
@@ -830,26 +640,16 @@ class _ClassroomScreenState extends State<ClassroomScreen> {
 
     return ChoiceChip(
       label: Text(displayText),
-
       selected: isSelected,
-
       selectedColor: primaryNavy,
-
       backgroundColor: Colors.white,
-
       side: BorderSide(
-        color: isSelected
-            ? primaryNavy
-            : Colors.grey.shade300,
+        color: isSelected ? primaryNavy : Colors.grey.shade300,
       ),
-
       labelStyle: TextStyle(
-        color: isSelected
-            ? Colors.white
-            : darkNavy,
+        color: isSelected ? Colors.white : darkNavy,
         fontWeight: FontWeight.w600,
       ),
-
       onSelected: (_) {
         setState(() {
           _selectedFilter = filter;

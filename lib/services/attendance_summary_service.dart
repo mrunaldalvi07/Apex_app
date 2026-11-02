@@ -1,56 +1,34 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
-
 import '../models/attendance_summary_model.dart';
 
 class AttendanceSummaryService {
-  final FirebaseFirestore firestore;
-
   AttendanceSummaryService({FirebaseFirestore? firestore})
       : firestore = firestore ?? FirebaseFirestore.instance;
 
-  static const _months = [
-    '',
-    'January',
-    'February',
-    'March',
-    'April',
-    'May',
-    'June',
-    'July',
-    'August',
-    'September',
-    'October',
-    'November',
-    'December',
+  final FirebaseFirestore firestore;
+
+  static const List<String> months = [
+    'January','February','March','April','May','June',
+    'July','August','September','October','November','December',
   ];
 
-  Future<List<QueryDocumentSnapshot<Map<String, dynamic>>>> _sessions({
-    required String branch,
-    required String year,
-    required String course,
-    required String month,
-  }) async {
-    final snapshot = await firestore
-        .collection('live_sessions')
-        .where('branch', isEqualTo: branch)
-        .where('year', isEqualTo: year)
-        .where('course', isEqualTo: course.toUpperCase())
-        .where('status', isEqualTo: 'ended')
-        .get();
+  DateTime? _dateOf(dynamic value) {
+    if (value is Timestamp) return value.toDate();
+    if (value is DateTime) return value;
+    return null;
+  }
 
-    final sessions = snapshot.docs.where((doc) {
-      final value = doc.data()['createdAt'];
-      if (value is! Timestamp) return false;
-      return _months[value.toDate().month] == month;
-    }).toList();
+  bool _isPresent(dynamic value) {
+    if (value == true) return true;
+    final status = value?.toString().trim().toLowerCase();
+    return status == 'present' || status == 'p' || status == 'true';
+  }
 
-    sessions.sort((a, b) {
-      final ta = a.data()['createdAt'] as Timestamp;
-      final tb = b.data()['createdAt'] as Timestamp;
-      return ta.compareTo(tb);
-    });
-
-    return sessions;
+  int _compareRoll(String a, String b) {
+    final na = int.tryParse(a.trim());
+    final nb = int.tryParse(b.trim());
+    if (na != null && nb != null) return na.compareTo(nb);
+    return a.toLowerCase().compareTo(b.toLowerCase());
   }
 
   Future<List<AttendanceSummaryModel>> getAttendanceSummary({
@@ -58,88 +36,77 @@ class AttendanceSummaryService {
     required String year,
     required String course,
     required String month,
+    double threshold = 75,
   }) async {
-    final studentsSnapshot = await firestore
-        .collection('users')
+    if (branch.trim().isEmpty || year.trim().isEmpty ||
+        course.trim().isEmpty || !months.contains(month)) {
+      throw ArgumentError('Select a valid branch, year, course and month.');
+    }
+    if (threshold < 0 || threshold > 100) {
+      throw ArgumentError.value(threshold, 'threshold', 'Must be between 0 and 100.');
+    }
+
+    final cleanBranch = branch.trim().toUpperCase();
+    final cleanYear = year.trim().replaceAll(RegExp(r'\s*Year$', caseSensitive: false), '');
+    final cleanCourse = course.trim().toUpperCase();
+
+    final studentSnapshot = await firestore.collection('users')
         .where('role', isEqualTo: 'student')
-        .where('branch', isEqualTo: branch)
-        .where('year', isEqualTo: year)
+        .where('branch', isEqualTo: cleanBranch)
+        .where('year', isEqualTo: cleanYear)
         .get();
 
-    final sessions = await _sessions(
-      branch: branch,
-      year: year,
-      course: course,
-      month: month,
-    );
+    final sessionSnapshot = await firestore.collection('live_sessions')
+        .where('branch', isEqualTo: cleanBranch)
+        .where('year', isEqualTo: cleanYear)
+        .where('course', isEqualTo: cleanCourse)
+        .where('status', isEqualTo: 'ended')
+        .get();
 
-    // Read one attendance subcollection per session instead of one document
-    // per student per session. This avoids the old N x M read explosion.
-    final attendanceBySession = <String, Map<String, String>>{};
+    final monthNumber = months.indexOf(month) + 1;
+    final sessions = sessionSnapshot.docs.where((doc) {
+      final date = _dateOf(doc.data()['createdAt']);
+      return date != null && date.month == monthNumber;
+    }).toList()
+      ..sort((a, b) => _dateOf(a.data()['createdAt'])!
+          .compareTo(_dateOf(b.data()['createdAt'])!));
 
+    // Fetch each completed session's attendance subcollection once.
+    // Firestore errors are allowed to propagate; they must never become false absences.
+    final attendanceBySession = <String, Map<String, dynamic>>{};
     for (final session in sessions) {
-      final attendanceSnapshot = await firestore
-          .collection('attendance')
-          .doc(session.id)
-          .collection('students')
-          .get();
-
+      final attendanceSnapshot = await firestore.collection('attendance')
+          .doc(session.id).collection('students').get();
       attendanceBySession[session.id] = {
-        for (final doc in attendanceSnapshot.docs)
-          doc.id: (doc.data()['status'] ?? 'Absent').toString(),
+        for (final record in attendanceSnapshot.docs) record.id: record.data()['status'],
       };
     }
 
-    final students = studentsSnapshot.docs.toList();
-    students.sort((a, b) {
-      final ra = (a.data()['rollNo'] ?? '').toString();
-      final rb = (b.data()['rollNo'] ?? '').toString();
+    final studentDocs = studentSnapshot.docs.toList()
+      ..sort((a, b) => _compareRoll(
+        (a.data()['rollNo'] ?? a.data()['rollNumber'] ?? '').toString(),
+        (b.data()['rollNo'] ?? b.data()['rollNumber'] ?? '').toString(),
+      ));
 
-      final na = int.tryParse(ra);
-      final nb = int.tryParse(rb);
-      if (na != null && nb != null) return na.compareTo(nb);
-      return ra.compareTo(rb);
-    });
-
-    return [
-      for (final student in students)
-        _buildStudentSummary(
-          student,
-          sessions,
-          attendanceBySession,
-        ),
-    ];
-  }
-
-  AttendanceSummaryModel _buildStudentSummary(
-    QueryDocumentSnapshot<Map<String, dynamic>> student,
-    List<QueryDocumentSnapshot<Map<String, dynamic>>> sessions,
-    Map<String, Map<String, String>> attendanceBySession,
-  ) {
-    int present = 0;
-    int absent = 0;
-
-    for (final session in sessions) {
-      final status = attendanceBySession[session.id]?[student.id];
-      if (status == 'Present') {
-        present++;
-      } else {
-        absent++;
+    return studentDocs.map((student) {
+      var present = 0;
+      for (final session in sessions) {
+        if (_isPresent(attendanceBySession[session.id]?[student.id])) present++;
       }
-    }
-
-    final total = sessions.length;
-    final percentage = total == 0 ? 0.0 : (present / total) * 100;
-
-    return AttendanceSummaryModel(
-      studentId: student.id,
-      rollNo: (student.data()['rollNo'] ?? '').toString(),
-      studentName: (student.data()['name'] ?? '').toString(),
-      present: present,
-      absent: absent,
-      totalClasses: total,
-      attendancePercentage: percentage,
-      status: percentage >= 75 ? 'Regular' : 'Detained',
-    );
+      final total = sessions.length;
+      final absent = total - present;
+      final percentage = total == 0 ? 0.0 : present * 100 / total;
+      final data = student.data();
+      return AttendanceSummaryModel(
+        studentId: student.id,
+        rollNo: (data['rollNo'] ?? data['rollNumber'] ?? '').toString(),
+        studentName: (data['name'] ?? data['displayName'] ?? data['fullName'] ?? '').toString(),
+        present: present,
+        absent: absent,
+        totalClasses: total,
+        attendancePercentage: percentage,
+        status: total == 0 ? 'No Classes' : (percentage < threshold ? 'Detained' : 'Regular'),
+      );
+    }).toList();
   }
 }

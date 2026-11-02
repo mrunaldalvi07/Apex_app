@@ -11,8 +11,16 @@ class CrDashboard extends StatelessWidget {
   const CrDashboard({super.key});
 
   Future<void> logout(BuildContext context) async {
-    await FirebaseAuth.instance.signOut();
-    // AuthWrapper reacts to sign-out and displays LoginScreen.
+    try {
+      await FirebaseAuth.instance.signOut();
+      if (!context.mounted) return;
+      Navigator.of(context).pushNamedAndRemoveUntil('/login', (route) => false);
+    } catch (e) {
+      if (!context.mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Logout failed: $e')),
+      );
+    }
   }
 
   @override

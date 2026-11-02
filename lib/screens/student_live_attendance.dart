@@ -145,13 +145,8 @@ class _StudentLiveAttendanceScreenState
       );
 
       if (distance > radius) {
-        await attendanceRef.set({
-          'studentId': user.uid,
-          'status': 'Absent',
-          'distance': distance,
-          'markedAt': FieldValue.serverTimestamp(),
-        });
-
+        // A rejected location attempt is not an attendance record.
+        // Do not write Absent here; otherwise the student cannot retry.
         throw Exception(
           'You are ${distance.toStringAsFixed(0)} m away. '
           'You must be within ${radius.toStringAsFixed(0)} m.',
@@ -498,7 +493,7 @@ class _StudentLiveAttendanceScreenState
                 ),
                 const SizedBox(height: 4),
                 Text(
-                  '$year Year ? $branch',
+                  '$year Year • $branch',
                   style: const TextStyle(
                     color: Colors.white70,
                     fontSize: 11,
@@ -529,10 +524,10 @@ class _StudentLiveAttendanceScreenState
     Map<String, dynamic> data,
     bool isMarking,
   ) {
-    final course =
-        (data['course'] ?? 'COURSE')
-            .toString()
-            .toUpperCase();
+    final rawCourse = data['course'] ?? data['courseName'] ?? data['subject'] ?? data['subjectName'] ?? 'COURSE';
+    final course = rawCourse is Map
+        ? (rawCourse['name'] ?? rawCourse['title'] ?? rawCourse['courseName'] ?? 'COURSE').toString().toUpperCase()
+        : rawCourse.toString().toUpperCase();
 
     final radius = data['radius'] ?? 500;
 
@@ -603,7 +598,7 @@ class _StudentLiveAttendanceScreenState
                     ),
                     const SizedBox(height: 4),
                     Text(
-                      '${data['year'] ?? year} Year ? '
+                      '${data['year'] ?? year} Year • '
                       '${data['branch'] ?? branch}',
                       style: const TextStyle(
                         color:

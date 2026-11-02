@@ -1,18 +1,23 @@
-import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:printing/printing.dart';
 import 'package:pdf/widgets.dart' as pw;
 
 import '../models/attendance_summary_model.dart';
 import '../services/notification_service.dart';
+import '../services/attendance_summary_service.dart';
 
 class DetentionListScreen extends StatefulWidget {
+  final String branch;
+  final String year;
+  final String course;
+  final String month;
+
   const DetentionListScreen({
     super.key,
-    required String branch,
-    required String year,
-    required String course,
-    required String month,
+    required this.branch,
+    required this.year,
+    required this.course,
+    required this.month,
   });
 
   @override
@@ -44,7 +49,7 @@ class _DetentionListScreenState extends State<DetentionListScreen> {
   // FIRESTORE
   // ============================================================
 
-  final FirebaseFirestore _firestore = FirebaseFirestore.instance;
+  final AttendanceSummaryService _summaryService = AttendanceSummaryService();
 
   // ============================================================
   // FILTER DATA
@@ -52,7 +57,7 @@ class _DetentionListScreenState extends State<DetentionListScreen> {
 
   final List<String> branches = [
     'CM',
-    'IF',
+    'IT',
   ];
 
   final List<String> years = [
@@ -69,6 +74,8 @@ class _DetentionListScreenState extends State<DetentionListScreen> {
     'Python Programming',
   ];
 
+  final List<String> months = AttendanceSummaryService.months;
+
   // ============================================================
   // SELECTED FILTERS
   // ============================================================
@@ -76,6 +83,7 @@ class _DetentionListScreenState extends State<DetentionListScreen> {
   String? selectedBranch;
   String? selectedYear;
   String? selectedCourse;
+  String? selectedMonth;
 
   // ============================================================
   // THRESHOLD
@@ -112,6 +120,10 @@ class _DetentionListScreenState extends State<DetentionListScreen> {
   @override
   void initState() {
     super.initState();
+    selectedBranch = widget.branch.isEmpty ? null : widget.branch;
+    selectedYear = widget.year.isEmpty ? null : widget.year.replaceAll(RegExp(r'\s*Year$', caseSensitive: false), '');
+    selectedCourse = widget.course.isEmpty ? null : widget.course;
+    selectedMonth = months.contains(widget.month) ? widget.month : months[DateTime.now().month - 1];
 
     thresholdController.addListener(
       _thresholdChanged,
@@ -145,29 +157,15 @@ class _DetentionListScreenState extends State<DetentionListScreen> {
   // ============================================================
 
   Future<void> loadDetentionData() async {
-    if (selectedBranch == null ||
-        selectedYear == null ||
-        selectedCourse == null) {
-      _showMessage(
-        'Please select Branch, Year and Course.',
-        isError: true,
-      );
-
+    if (selectedBranch == null || selectedYear == null ||
+        selectedCourse == null || selectedMonth == null) {
+      _showMessage('Please select Branch, Year, Course and Month.', isError: true);
       return;
     }
 
-    final enteredThreshold = double.tryParse(
-      thresholdController.text,
-    );
-
-    if (enteredThreshold == null ||
-        enteredThreshold < 0 ||
-        enteredThreshold > 100) {
-      _showMessage(
-        'Enter a valid threshold between 0 and 100.',
-        isError: true,
-      );
-
+    final enteredThreshold = double.tryParse(thresholdController.text);
+    if (enteredThreshold == null || enteredThreshold < 0 || enteredThreshold > 100) {
+      _showMessage('Enter a valid threshold between 0 and 100.', isError: true);
       return;
     }
 
@@ -177,158 +175,22 @@ class _DetentionListScreenState extends State<DetentionListScreen> {
     });
 
     try {
-      // ========================================================
-      // GET STUDENTS
-      // ========================================================
-
-      final studentsSnapshot = await _firestore
-          .collection('users')
-          .where(
-            'role',
-            isEqualTo: 'student',
-          )
-          .where(
-            'branch',
-            isEqualTo: selectedBranch,
-          )
-          .where(
-            'year',
-            isEqualTo: selectedYear,
-          )
-          .get();
-
-      // ========================================================
-      // GET ENDED SESSIONS
-      // ========================================================
-
-      final sessionsSnapshot = await _firestore
-          .collection('live_sessions')
-          .where(
-            'branch',
-            isEqualTo: selectedBranch,
-          )
-          .where(
-            'year',
-            isEqualTo: selectedYear,
-          )
-          .where(
-            'course',
-            isEqualTo: selectedCourse!.toUpperCase(),
-          )
-          .where(
-            'status',
-            isEqualTo: 'ended',
-          )
-          .get();
-
-      final sessions = sessionsSnapshot.docs.toList();
-
-      sessions.sort((a, b) {
-        final aValue = a.data()['createdAt'];
-
-        final bValue = b.data()['createdAt'];
-
-        if (aValue is Timestamp && bValue is Timestamp) {
-          return aValue.compareTo(bValue);
-        }
-
-        return 0;
-      });
-
-      // ========================================================
-      // SORT STUDENTS BY ROLL NUMBER
-      // ========================================================
-
-      final studentDocs = studentsSnapshot.docs.toList();
-
-      studentDocs.sort((a, b) {
-        final rollA = (a.data()['rollNo'] ?? '').toString();
-
-        final rollB = (b.data()['rollNo'] ?? '').toString();
-
-        final numA = int.tryParse(rollA);
-
-        final numB = int.tryParse(rollB);
-
-        if (numA != null && numB != null) {
-          return numA.compareTo(numB);
-        }
-
-        return rollA.compareTo(
-          rollB,
-        );
-      });
-
-      // ========================================================
-      // CREATE SUMMARY
-      // ========================================================
-
-      final result = <AttendanceSummaryModel>[];
-
-      for (final student in studentDocs) {
-        int present = 0;
-        int absent = 0;
-
-        for (final session in sessions) {
-          final attendance = await _firestore
-              .collection('attendance')
-              .doc(session.id)
-              .collection('students')
-              .doc(student.id)
-              .get();
-
-          final status = attendance.data()?['status'];
-
-          if (status == 'Present' || status == 'present' || status == true) {
-            present++;
-          } else {
-            absent++;
-          }
-        }
-
-        final totalClasses = sessions.length;
-
-        final percentage =
-            totalClasses == 0 ? 0.0 : (present / totalClasses) * 100;
-
-        final data = student.data();
-
-        result.add(
-          AttendanceSummaryModel(
-            studentId: student.id,
-            rollNo: (data['rollNo'] ?? '').toString(),
-            studentName: (data['name'] ?? data['displayName'] ?? '').toString(),
-            present: present,
-            absent: absent,
-            totalClasses: totalClasses,
-            attendancePercentage: percentage,
-            status: percentage < threshold ? 'Detained' : 'Regular',
-          ),
-        );
-      }
+      final result = await _summaryService.getAttendanceSummary(
+        branch: selectedBranch!,
+        year: selectedYear!,
+        course: selectedCourse!,
+        month: selectedMonth!,
+        threshold: threshold,
+      );
 
       if (!mounted) return;
-
-      setState(() {
-        students = result;
-      });
-
-      _showMessage(
-        'Detention list generated successfully.',
-      );
+      setState(() => students = result);
+      _showMessage('Detention list generated successfully.');
     } catch (e) {
       if (!mounted) return;
-
-      _showMessage(
-        'Unable to generate detention list: $e',
-        isError: true,
-      );
+      _showMessage('Unable to generate detention list: $e', isError: true);
     } finally {
-      if (mounted) {
-        setState(() {
-          loading = false;
-        });
-      }
+      if (mounted) setState(() => loading = false);
     }
   }
 
@@ -339,7 +201,7 @@ class _DetentionListScreenState extends State<DetentionListScreen> {
   List<AttendanceSummaryModel> get detainedStudents {
     return students.where(
       (student) {
-        return student.attendancePercentage < threshold;
+        return student.totalClasses > 0 && student.attendancePercentage < threshold;
       },
     ).toList();
   }
@@ -379,6 +241,7 @@ class _DetentionListScreenState extends State<DetentionListScreen> {
         studentId: student.studentId,
         course: selectedCourse!,
         percentage: student.attendancePercentage,
+        threshold: threshold,
       );
 
       if (!mounted) return;
@@ -425,6 +288,7 @@ class _DetentionListScreenState extends State<DetentionListScreen> {
             studentId: student.studentId,
             course: selectedCourse!,
             percentage: student.attendancePercentage,
+            threshold: threshold,
           );
 
           successCount++;
@@ -492,6 +356,9 @@ class _DetentionListScreenState extends State<DetentionListScreen> {
               ),
               pw.Text(
                 'Course: ${selectedCourse ?? '-'}',
+              ),
+              pw.Text(
+                'Month: ${selectedMonth ?? '-'}',
               ),
               pw.Text(
                 'Detention Threshold: ${threshold.toStringAsFixed(0)}%',
@@ -793,6 +660,20 @@ class _DetentionListScreenState extends State<DetentionListScreen> {
             onChanged: (value) {
               setState(() {
                 selectedCourse = value;
+                students = [];
+              });
+            },
+          ),
+
+          const SizedBox(height: 11),
+          _dropdown(
+            label: 'Month',
+            value: selectedMonth,
+            items: months,
+            icon: Icons.date_range_rounded,
+            onChanged: (value) {
+              setState(() {
+                selectedMonth = value;
                 students = [];
               });
             },
@@ -1301,7 +1182,7 @@ class _DetentionListScreenState extends State<DetentionListScreen> {
       ),
       child: const Center(
         child: Text(
-          'Select Branch, Year and Course,\nthen generate the detention list.',
+          'Select Branch, Year, Course and Month,\nthen generate the detention list.',
           textAlign: TextAlign.center,
           style: TextStyle(
             color: textGrey,

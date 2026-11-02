@@ -1,10 +1,14 @@
-import 'package:flutter/material.dart';
+import 'dart:async';
+
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:flutter/material.dart';
+
 import 'create_notice_screen.dart';
 import 'notice_details_screen.dart';
+import 'notifications_screen.dart';
 import '../models/notice.dart';
 import '../services/notice_service.dart';
-import 'dart:async';
 
 class CRNoticeScreen extends StatefulWidget {
   const CRNoticeScreen({super.key});
@@ -20,13 +24,6 @@ class _CRNoticeScreenState extends State<CRNoticeScreen> {
   static const Color mutedColor = Color(0xFF708090);
   static const Color borderColor = Color(0xFFE1E8F0);
 
-  // Search bar gradient
-  static const Color searchGradientLight = Color(0xFFEAF3FC);
-  static const Color searchGradientBlue = Color(0xFFDCEBFA);
-
-  // Popup menu background
-  static const Color popupBackground = Color(0xFFF4F8FD);
-
   final TextEditingController _searchController = TextEditingController();
 
   String searchQuery = "";
@@ -36,6 +33,10 @@ class _CRNoticeScreenState extends State<CRNoticeScreen> {
   bool showStarredOnly = false;
 
   final Map<String, bool> starredStatus = {};
+
+  // ------------------------------------------------------------
+  // HIGHLIGHT SEARCH TEXT
+  // ------------------------------------------------------------
 
   TextSpan highlightText(String text, String query) {
     if (query.isEmpty) {
@@ -69,6 +70,10 @@ class _CRNoticeScreenState extends State<CRNoticeScreen> {
     );
   }
 
+  // ------------------------------------------------------------
+  // FORMAT DATE AND TIME
+  // ------------------------------------------------------------
+
   String formatDateTime(DateTime? dateTime) {
     if (dateTime == null) return "";
 
@@ -89,6 +94,10 @@ class _CRNoticeScreenState extends State<CRNoticeScreen> {
     }
   }
 
+  // ------------------------------------------------------------
+  // LOAD STARRED NOTICES
+  // ------------------------------------------------------------
+
   Future<void> loadStarredStatus() async {
     final user = FirebaseAuth.instance.currentUser;
 
@@ -101,11 +110,98 @@ class _CRNoticeScreenState extends State<CRNoticeScreen> {
     setState(() {
       starredStatus.clear();
 
-      for (final noticeId in starredNotices.keys) {
+      for (final noticeId in starredNotices) {
         starredStatus[noticeId] = true;
       }
     });
   }
+
+  // ------------------------------------------------------------
+  // OPEN NOTIFICATIONS
+  // ------------------------------------------------------------
+
+  void _openNotifications() {
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (_) => const NotificationsScreen(),
+      ),
+    );
+  }
+
+  // ------------------------------------------------------------
+  // NOTIFICATION BELL
+  // Counts only unread NOTICE notifications for this user.
+  // Attendance notifications are excluded.
+  // ------------------------------------------------------------
+
+  Widget _buildNotificationBell() {
+    final user = FirebaseAuth.instance.currentUser;
+
+    if (user == null) {
+      return const SizedBox.shrink();
+    }
+
+    return StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
+      stream: FirebaseFirestore.instance
+          .collection('notifications')
+          .where('studentId', isEqualTo: user.uid)
+          .snapshots(),
+      builder: (context, snapshot) {
+        final unreadNoticeCount = snapshot.data?.docs.where((doc) {
+              final data = doc.data();
+
+              return data['type'] == 'notice' && data['read'] != true;
+            }).length ??
+            0;
+
+        return IconButton(
+          tooltip: 'Notifications',
+          onPressed: _openNotifications,
+          icon: Stack(
+            clipBehavior: Clip.none,
+            children: [
+              const Icon(
+                Icons.notifications_outlined,
+                color: headingColor,
+                size: 25,
+              ),
+              if (unreadNoticeCount > 0)
+                Positioned(
+                  right: -6,
+                  top: -5,
+                  child: Container(
+                    padding: const EdgeInsets.all(4),
+                    constraints: const BoxConstraints(
+                      minWidth: 17,
+                      minHeight: 17,
+                    ),
+                    decoration: const BoxDecoration(
+                      color: Colors.red,
+                      shape: BoxShape.circle,
+                    ),
+                    child: Center(
+                      child: Text(
+                        unreadNoticeCount > 99 ? '99+' : '$unreadNoticeCount',
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontSize: 9,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
+  // ------------------------------------------------------------
+  // INITIALIZE
+  // ------------------------------------------------------------
 
   @override
   void initState() {
@@ -113,12 +209,18 @@ class _CRNoticeScreenState extends State<CRNoticeScreen> {
     loadStarredStatus();
   }
 
+  // ------------------------------------------------------------
+  // BUILD
+  // ------------------------------------------------------------
+
   @override
   Widget build(BuildContext context) {
     final currentUser = FirebaseAuth.instance.currentUser;
 
     return Scaffold(
       backgroundColor: backgroundColor,
+
+      // APP BAR
       appBar: AppBar(
         backgroundColor: Colors.white,
         elevation: 0,
@@ -135,6 +237,10 @@ class _CRNoticeScreenState extends State<CRNoticeScreen> {
           color: headingColor,
         ),
         actions: [
+          // NOTIFICATION BELL
+          _buildNotificationBell(),
+
+          // STARRED FILTER
           IconButton(
             icon: Icon(
               showStarredOnly ? Icons.star : Icons.star_border,
@@ -148,6 +254,8 @@ class _CRNoticeScreenState extends State<CRNoticeScreen> {
               });
             },
           ),
+
+          // PINNED FILTER
           IconButton(
             icon: Icon(
               showPinnedOnly ? Icons.push_pin : Icons.push_pin_outlined,
@@ -161,6 +269,8 @@ class _CRNoticeScreenState extends State<CRNoticeScreen> {
               });
             },
           ),
+
+          // CREATE NOTICE
           IconButton(
             icon: const Icon(
               Icons.add,
@@ -170,17 +280,20 @@ class _CRNoticeScreenState extends State<CRNoticeScreen> {
               Navigator.push(
                 context,
                 MaterialPageRoute(
-                  builder: (_) => CreateNoticeScreen(),
+                  builder: (_) => const CreateNoticeScreen(),
                 ),
               );
             },
           ),
+
           const SizedBox(width: 10),
         ],
       ),
+
+      // BODY
       body: Column(
         children: [
-          // Search bar
+          // SEARCH BAR
           Padding(
             padding: const EdgeInsets.only(
               left: 12,
@@ -188,18 +301,12 @@ class _CRNoticeScreenState extends State<CRNoticeScreen> {
               top: 12,
               bottom: 0,
             ),
-            child: Container(
-              decoration: BoxDecoration(
-                gradient: const LinearGradient(
-                  colors: [
-                    searchGradientLight,
-                    searchGradientBlue,
-                  ],
-                  begin: Alignment.centerLeft,
-                  end: Alignment.centerRight,
-                ),
+            child: Card(
+              elevation: 0,
+              color: Colors.white,
+              shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(30),
-                border: Border.all(
+                side: const BorderSide(
                   color: borderColor,
                 ),
               ),
@@ -225,18 +332,23 @@ class _CRNoticeScreenState extends State<CRNoticeScreen> {
                       _debounce!.cancel();
                     }
 
-                    _debounce = Timer(const Duration(milliseconds: 300), () {
-                      setState(() {
-                        searchQuery = value.toLowerCase();
-                      });
-                    });
+                    _debounce = Timer(
+                      const Duration(milliseconds: 300),
+                      () {
+                        if (!mounted) return;
+
+                        setState(() {
+                          searchQuery = value.toLowerCase();
+                        });
+                      },
+                    );
                   },
                 ),
               ),
             ),
           ),
 
-          // Filter heading
+          // FILTER HEADING
           if (showPinnedOnly || showStarredOnly)
             Padding(
               padding: const EdgeInsets.only(
@@ -254,7 +366,9 @@ class _CRNoticeScreenState extends State<CRNoticeScreen> {
                     ),
                   ),
                   Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 12),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 12,
+                    ),
                     child: Text(
                       showPinnedOnly && showStarredOnly
                           ? "Starred & Pinned Notices"
@@ -278,7 +392,7 @@ class _CRNoticeScreenState extends State<CRNoticeScreen> {
               ),
             ),
 
-          // Notices
+          // NOTICES
           Expanded(
             child: StreamBuilder<List<Notice>>(
               stream: NoticeService.getNotices(),
@@ -287,6 +401,18 @@ class _CRNoticeScreenState extends State<CRNoticeScreen> {
                   return const Center(
                     child: CircularProgressIndicator(
                       color: primaryBlue,
+                    ),
+                  );
+                }
+
+                if (snapshot.hasError) {
+                  return const Center(
+                    child: Text(
+                      "Unable to load notices",
+                      style: TextStyle(
+                        color: mutedColor,
+                        fontSize: 15,
+                      ),
                     ),
                   );
                 }
@@ -310,9 +436,9 @@ class _CRNoticeScreenState extends State<CRNoticeScreen> {
                           (!showStarredOnly ||
                               starredStatus[notice.id] == true) &&
                           (notice.title.toLowerCase().contains(searchQuery) ||
-                              notice.description.toLowerCase().contains(
-                                    searchQuery,
-                                  )),
+                              notice.description
+                                  .toLowerCase()
+                                  .contains(searchQuery)),
                     )
                     .toList();
 
@@ -329,7 +455,12 @@ class _CRNoticeScreenState extends State<CRNoticeScreen> {
                 }
 
                 return ListView.builder(
-                  padding: const EdgeInsets.fromLTRB(12, 10, 12, 20),
+                  padding: const EdgeInsets.fromLTRB(
+                    12,
+                    10,
+                    12,
+                    20,
+                  ),
                   itemCount: notices.length,
                   itemBuilder: (context, index) {
                     final notice = notices[index];
@@ -357,8 +488,6 @@ class _CRNoticeScreenState extends State<CRNoticeScreen> {
                             MaterialPageRoute(
                               builder: (context) => NoticeDetailsScreen(
                                 notice: notice,
-                                showStarredOnly: showStarredOnly,
-                                showPinnedOnly: showPinnedOnly,
                               ),
                             ),
                           );
@@ -368,7 +497,7 @@ class _CRNoticeScreenState extends State<CRNoticeScreen> {
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              // Notice creator + date
+                              // CREATOR + DATE
                               Row(
                                 children: [
                                   if (notice.pinned) ...[
@@ -393,12 +522,14 @@ class _CRNoticeScreenState extends State<CRNoticeScreen> {
                                     const Icon(
                                       Icons.star,
                                       size: 16,
-                                      color: primaryBlue,
+                                      color: Color(0xFFE5A900),
                                     ),
                                     const SizedBox(width: 4),
                                   ],
                                   Text(
-                                    formatDateTime(notice.createdAt),
+                                    formatDateTime(
+                                      notice.createdAt,
+                                    ),
                                     style: const TextStyle(
                                       color: mutedColor,
                                       fontSize: 12,
@@ -409,7 +540,7 @@ class _CRNoticeScreenState extends State<CRNoticeScreen> {
 
                               const SizedBox(height: 5),
 
-                              // Title + popup menu
+                              // TITLE + POPUP MENU
                               Row(
                                 children: [
                                   Expanded(
@@ -430,8 +561,6 @@ class _CRNoticeScreenState extends State<CRNoticeScreen> {
                                     ),
                                   ),
                                   PopupMenuButton<String>(
-                                    color: popupBackground,
-                                    surfaceTintColor: popupBackground,
                                     icon: const Icon(
                                       Icons.more_vert,
                                       color: mutedColor,
@@ -442,9 +571,7 @@ class _CRNoticeScreenState extends State<CRNoticeScreen> {
                                         final user =
                                             FirebaseAuth.instance.currentUser;
 
-                                        if (user == null) {
-                                          return;
-                                        }
+                                        if (user == null) return;
 
                                         try {
                                           await NoticeService.toggleStarNotice(
@@ -462,8 +589,9 @@ class _CRNoticeScreenState extends State<CRNoticeScreen> {
                                         } catch (e) {
                                           if (!mounted) return;
 
-                                          ScaffoldMessenger.of(context)
-                                              .showSnackBar(
+                                          ScaffoldMessenger.of(
+                                            context,
+                                          ).showSnackBar(
                                             SnackBar(
                                               content: Text(
                                                 "Failed to update star: $e",
@@ -477,9 +605,7 @@ class _CRNoticeScreenState extends State<CRNoticeScreen> {
 
                                       // PIN
                                       if (value == "pin") {
-                                        if (!isOwner) {
-                                          return;
-                                        }
+                                        if (!isOwner) return;
 
                                         try {
                                           await NoticeService.togglePinNotice(
@@ -489,8 +615,9 @@ class _CRNoticeScreenState extends State<CRNoticeScreen> {
                                         } catch (e) {
                                           if (!mounted) return;
 
-                                          ScaffoldMessenger.of(context)
-                                              .showSnackBar(
+                                          ScaffoldMessenger.of(
+                                            context,
+                                          ).showSnackBar(
                                             SnackBar(
                                               content: Text(
                                                 "Failed to update pin: $e",
@@ -504,11 +631,9 @@ class _CRNoticeScreenState extends State<CRNoticeScreen> {
 
                                       // EDIT
                                       if (value == "edit") {
-                                        if (!isOwner) {
-                                          return;
-                                        }
+                                        if (!isOwner) return;
 
-                                        Navigator.push(
+                                        await Navigator.push(
                                           context,
                                           MaterialPageRoute(
                                             builder: (context) =>
@@ -523,9 +648,7 @@ class _CRNoticeScreenState extends State<CRNoticeScreen> {
 
                                       // DELETE
                                       if (value == "delete") {
-                                        if (!isOwner) {
-                                          return;
-                                        }
+                                        if (!isOwner) return;
 
                                         final confirm = await showDialog<bool>(
                                           context: context,
@@ -576,21 +699,36 @@ class _CRNoticeScreenState extends State<CRNoticeScreen> {
                                         );
 
                                         if (confirm == true) {
-                                          await NoticeService.deleteNotice(
-                                            notice.id!,
-                                          );
+                                          try {
+                                            await NoticeService.deleteNotice(
+                                              notice.id!,
+                                            );
 
-                                          if (!mounted) return;
+                                            if (!mounted) return;
+                                          } catch (e) {
+                                            if (!mounted) return;
+
+                                            ScaffoldMessenger.of(
+                                              context,
+                                            ).showSnackBar(
+                                              SnackBar(
+                                                content: Text(
+                                                  "Failed to delete notice: $e",
+                                                ),
+                                              ),
+                                            );
+                                          }
                                         }
 
                                         return;
                                       }
                                     },
+
+                                    // POPUP MENU ITEMS
                                     itemBuilder: (context) {
                                       final items = <PopupMenuEntry<String>>[];
 
-                                      // ⭐ Star is available for
-                                      // every notice.
+                                      // STAR IS AVAILABLE TO EVERYONE
                                       items.add(
                                         PopupMenuItem<String>(
                                           value: "star",
@@ -601,7 +739,13 @@ class _CRNoticeScreenState extends State<CRNoticeScreen> {
                                                         false)
                                                     ? Icons.star
                                                     : Icons.star_border,
-                                                color: primaryBlue,
+                                                color:
+                                                    (starredStatus[notice.id] ??
+                                                            false)
+                                                        ? const Color(
+                                                            0xFFE5A900,
+                                                          )
+                                                        : headingColor,
                                               ),
                                               const SizedBox(width: 10),
                                               Text(
@@ -609,18 +753,13 @@ class _CRNoticeScreenState extends State<CRNoticeScreen> {
                                                         false)
                                                     ? "Unstar"
                                                     : "Star",
-                                                style: const TextStyle(
-                                                  color: headingColor,
-                                                ),
                                               ),
                                             ],
                                           ),
                                         ),
                                       );
 
-                                      // 📌 Pin, ✏️ Edit and
-                                      // 🗑️ Delete are shown
-                                      // ONLY for the owner.
+                                      // OWNER-ONLY ACTIONS
                                       if (isOwner) {
                                         items.add(
                                           PopupMenuItem<String>(
@@ -638,9 +777,6 @@ class _CRNoticeScreenState extends State<CRNoticeScreen> {
                                                   notice.pinned
                                                       ? "Unpin"
                                                       : "Pin",
-                                                  style: const TextStyle(
-                                                    color: headingColor,
-                                                  ),
                                                 ),
                                               ],
                                             ),
@@ -654,15 +790,10 @@ class _CRNoticeScreenState extends State<CRNoticeScreen> {
                                               children: [
                                                 Icon(
                                                   Icons.edit,
-                                                  color: primaryBlue,
+                                                  color: headingColor,
                                                 ),
                                                 SizedBox(width: 10),
-                                                Text(
-                                                  "Edit",
-                                                  style: TextStyle(
-                                                    color: headingColor,
-                                                  ),
-                                                ),
+                                                Text("Edit"),
                                               ],
                                             ),
                                           ),
@@ -678,12 +809,7 @@ class _CRNoticeScreenState extends State<CRNoticeScreen> {
                                                   color: Colors.red,
                                                 ),
                                                 SizedBox(width: 10),
-                                                Text(
-                                                  "Delete",
-                                                  style: TextStyle(
-                                                    color: Colors.red,
-                                                  ),
-                                                ),
+                                                Text("Delete"),
                                               ],
                                             ),
                                           ),
@@ -698,7 +824,7 @@ class _CRNoticeScreenState extends State<CRNoticeScreen> {
 
                               const SizedBox(height: 2),
 
-                              // Description
+                              // DESCRIPTION
                               Text(
                                 notice.description,
                                 maxLines: 1,
@@ -711,9 +837,11 @@ class _CRNoticeScreenState extends State<CRNoticeScreen> {
 
                               const SizedBox(height: 8),
 
-                              // Attachments
+                              // ATTACHMENTS
                               if (notice.attachmentUrls
-                                  .where((file) => file.trim().isNotEmpty)
+                                  .where(
+                                    (file) => file.trim().isNotEmpty,
+                                  )
                                   .isNotEmpty)
                                 ...notice.attachmentUrls.map(
                                   (file) => Padding(
@@ -756,6 +884,10 @@ class _CRNoticeScreenState extends State<CRNoticeScreen> {
       ),
     );
   }
+
+  // ------------------------------------------------------------
+  // DISPOSE
+  // ------------------------------------------------------------
 
   @override
   void dispose() {

@@ -1,9 +1,11 @@
-import 'package:flutter/material.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:file_picker/file_picker.dart';
+import 'package:flutter/material.dart';
+import 'package:firebase_storage/firebase_storage.dart';
+
 import '../models/notice.dart';
 import '../services/notice_service.dart';
-import 'package:firebase_auth/firebase_auth.dart';
-import 'package:cloud_firestore/cloud_firestore.dart';
 
 class CreateNoticeScreen extends StatefulWidget {
   final Notice? notice;
@@ -15,440 +17,710 @@ class CreateNoticeScreen extends StatefulWidget {
 }
 
 class _CreateNoticeScreenState extends State<CreateNoticeScreen> {
-  final _noticeformkey = GlobalKey<FormState>();
-
-  bool faculty = false;
-  bool students = false;
-  bool ifStudent = false;
-  bool cmStudent = false;
-  bool pinned = false;
+  final _formKey = GlobalKey<FormState>();
 
   final TextEditingController _titleController = TextEditingController();
-  final TextEditingController _descController = TextEditingController();
+  final TextEditingController _descriptionController = TextEditingController();
+
+  bool faculty = false;
+  bool itStudents = false;
+  bool cmStudents = false;
+
+  bool isSaving = false;
 
   List<PlatformFile> selectedFiles = [];
+
+  bool get isEditing => widget.notice != null;
+
+  // Notice module's standard colour palette
+  static const Color primaryBlue = Color(0xFF0C447B);
+  static const Color headingColor = Color(0xFF0F2C59);
+  static const Color mutedColor = Color(0xFF708090);
+  static const Color borderColor = Color(0xFFE1E8F0);
+  static const Color backgroundColor = Color(0xFFF4F7FC);
 
   @override
   void initState() {
     super.initState();
 
-    _titleController.text = widget.notice?.title ?? "";
-    _descController.text = widget.notice?.description ?? "";
+    final notice = widget.notice;
 
-    if (widget.notice != null) {
-      final r = widget.notice!.recipients;
+    if (notice != null) {
+      _titleController.text = notice.title;
+      _descriptionController.text = notice.description;
 
-      faculty = r.contains("Faculty");
-      ifStudent = r.contains("IF");
-      cmStudent = r.contains("CM");
-      students = ifStudent || cmStudent;
-      pinned = widget.notice!.pinned;
+      final recipients =
+          notice.recipients.map((value) => value.trim().toLowerCase()).toSet();
+
+      faculty = recipients.contains('faculty');
+      itStudents = recipients.contains('it') || recipients.contains('if');
+      cmStudents = recipients.contains('cm');
     }
   }
 
-  Future<void> pickFiles() async {
-    FilePickerResult? result = await FilePicker.pickFiles(
-      allowMultiple: true,
-      withData: true,
-    );
+  @override
+  void dispose() {
+    _titleController.dispose();
+    _descriptionController.dispose();
+    super.dispose();
+  }
 
-    if (result != null) {
-      print(result.files.length);
+  // ------------------------------------------------------------
+  // PICK ATTACHMENTS
+  // ------------------------------------------------------------
+
+  Future<void> _pickFiles() async {
+    try {
+      final result = await FilePicker.pickFiles(
+        allowMultiple: true,
+        withData: true,
+      );
+
+      if (result == null || !mounted) return;
 
       setState(() {
-        selectedFiles.addAll(result.files);
+        for (final file in result.files) {
+          final alreadySelected = selectedFiles.any(
+            (existing) =>
+                existing.name == file.name && existing.size == file.size,
+          );
+
+          if (!alreadySelected) {
+            selectedFiles.add(file);
+          }
+        }
       });
+    } catch (error) {
+      if (!mounted) return;
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Could not select files: $error')),
+      );
     }
   }
 
-  Future<String?> getCurrentUserName() async {
+  void _removeSelectedFile(int index) {
+    setState(() {
+      selectedFiles.removeAt(index);
+    });
+  }
+
+  // ------------------------------------------------------------
+  // GET CURRENT USER DETAILS
+  // ------------------------------------------------------------
+
+  Future<Map<String, String?>> _getCurrentUserDetails() async {
     final user = FirebaseAuth.instance.currentUser;
 
-    if (user == null) return null;
+    if (user == null) {
+      throw Exception('You must be logged in to publish a notice.');
+    }
 
     final userDoc = await FirebaseFirestore.instance
-        .collection("users")
+        .collection('users')
         .doc(user.uid)
         .get();
 
-    if (!userDoc.exists) return null;
+    final userData = userDoc.data();
 
-    return userDoc.data()?['name'];
+    return {
+      'uid': user.uid,
+      'name':
+          userData?['name']?.toString() ?? user.displayName ?? 'Unknown User',
+    };
   }
+
+  // ------------------------------------------------------------
+  // SAVE NOTICE
+  // ------------------------------------------------------------
+
+  Future<void> _saveNotice() async {
+    if (!_formKey.currentState!.validate()) return;
+
+    final recipients = <String>[];
+
+    if (faculty) recipients.add('faculty');
+    if (itStudents) recipients.add('IT');
+    if (cmStudents) recipients.add('CM');
+
+    if (recipients.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Please select at least one recipient.'),
+        ),
+      );
+      return;
+    }
+
+    setState(() {
+      isSaving = true;
+    });
+
+    try {
+      final userDetails = await _getCurrentUserDetails();
+
+      final existingNotice = widget.notice;
+
+      final noticeData = Notice(
+        id: existingNotice?.id,
+        title: _titleController.text.trim(),
+        description: _descriptionController.text.trim(),
+        createdBy: existingNotice?.createdBy ?? userDetails['name'],
+        createdByUid: existingNotice?.createdByUid ?? userDetails['uid'],
+        createdAt: existingNotice?.createdAt,
+        lastUpdated: DateTime.now(),
+        recipients: recipients,
+        attachmentUrls: existingNotice?.attachmentUrls ?? [],
+        pinned: existingNotice?.pinned ?? false,
+      );
+
+      if (isEditing) {
+        await NoticeService.updateNotice(
+          existingNotice!.id!,
+          noticeData,
+        );
+
+        // Upload any newly selected attachments.
+        if (selectedFiles.isNotEmpty) {
+          final updatedUrls = await _uploadAdditionalAttachments(
+            existingNotice.id!,
+            selectedFiles,
+          );
+
+          await FirebaseFirestore.instance
+              .collection('notices')
+              .doc(existingNotice.id!)
+              .update({
+            'attachmentUrls': [
+              ...noticeData.attachmentUrls,
+              ...updatedUrls,
+            ],
+          });
+        }
+      } else {
+        await NoticeService.createNotice(noticeData, selectedFiles);
+      }
+
+      if (!mounted) return;
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            isEditing
+                ? 'Notice updated successfully.'
+                : 'Notice published successfully.',
+          ),
+        ),
+      );
+
+      Navigator.pop(context, true);
+    } catch (error) {
+      if (!mounted) return;
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Could not save notice: $error'),
+          backgroundColor: Colors.red.shade700,
+        ),
+      );
+    } finally {
+      if (mounted) {
+        setState(() {
+          isSaving = false;
+        });
+      }
+    }
+  }
+
+  // ------------------------------------------------------------
+  // UPLOAD ADDITIONAL ATTACHMENTS WHILE EDITING
+  // ------------------------------------------------------------
+
+  Future<List<String>> _uploadAdditionalAttachments(
+    String noticeId,
+    List<PlatformFile> files,
+  ) async {
+    final storage = await _getStorage();
+
+    final uploadedUrls = <String>[];
+
+    for (final file in files) {
+      if (file.bytes == null) {
+        throw Exception('Could not read file: ${file.name}');
+      }
+
+      final safeFileName =
+          '${DateTime.now().microsecondsSinceEpoch}_${file.name}';
+
+      final storageRef =
+          storage.ref().child('notices').child(noticeId).child(safeFileName);
+
+      await storageRef.putData(file.bytes!);
+
+      uploadedUrls.add(await storageRef.getDownloadURL());
+    }
+
+    return uploadedUrls;
+  }
+
+  Future<dynamic> _getStorage() async {
+    // Import Firebase Storage only when needed.
+    return FirebaseStorage.instance;
+  }
+
+  // ------------------------------------------------------------
+  // UI HELPERS
+  // ------------------------------------------------------------
+
+  Widget _buildSectionCard({
+    required String title,
+    required String subtitle,
+    required IconData icon,
+    required Widget child,
+  }) {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(18),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: borderColor),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(10),
+                decoration: BoxDecoration(
+                  color: primaryBlue.withValues(alpha: 0.08),
+                  borderRadius: BorderRadius.circular(11),
+                ),
+                child: Icon(icon, color: primaryBlue, size: 21),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      title,
+                      style: const TextStyle(
+                        color: headingColor,
+                        fontSize: 16,
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                    const SizedBox(height: 3),
+                    Text(
+                      subtitle,
+                      style: const TextStyle(
+                        color: mutedColor,
+                        fontSize: 12,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 18),
+          child,
+        ],
+      ),
+    );
+  }
+
+  Widget _buildTextField({
+    required TextEditingController controller,
+    required String hint,
+    required String? Function(String?) validator,
+    int maxLines = 1,
+    int? maxLength,
+  }) {
+    return TextFormField(
+      controller: controller,
+      maxLines: maxLines,
+      maxLength: maxLength,
+      validator: validator,
+      textCapitalization: TextCapitalization.sentences,
+      decoration: InputDecoration(
+        hintText: hint,
+        hintStyle: const TextStyle(color: mutedColor),
+        filled: true,
+        fillColor: backgroundColor,
+        contentPadding: const EdgeInsets.all(14),
+        border: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(11),
+          borderSide: const BorderSide(color: borderColor),
+        ),
+        enabledBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(11),
+          borderSide: const BorderSide(color: borderColor),
+        ),
+        focusedBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(11),
+          borderSide: const BorderSide(color: primaryBlue, width: 1.5),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildRecipientTile({
+    required String title,
+    required String subtitle,
+    required bool value,
+    required ValueChanged<bool?> onChanged,
+  }) {
+    return CheckboxListTile(
+      value: value,
+      onChanged: isSaving ? null : onChanged,
+      activeColor: primaryBlue,
+      contentPadding: EdgeInsets.zero,
+      controlAffinity: ListTileControlAffinity.leading,
+      title: Text(
+        title,
+        style: const TextStyle(
+          color: headingColor,
+          fontWeight: FontWeight.w600,
+          fontSize: 14,
+        ),
+      ),
+      subtitle: Text(
+        subtitle,
+        style: const TextStyle(color: mutedColor, fontSize: 12),
+      ),
+    );
+  }
+
+  Widget _buildExistingAttachments() {
+    final urls = widget.notice?.attachmentUrls ?? [];
+
+    if (urls.isEmpty) return const SizedBox.shrink();
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const Text(
+          'Existing attachments',
+          style: TextStyle(
+            color: headingColor,
+            fontWeight: FontWeight.w600,
+          ),
+        ),
+        const SizedBox(height: 8),
+        ...urls.map(
+          (url) => Container(
+            margin: const EdgeInsets.only(bottom: 8),
+            padding: const EdgeInsets.all(11),
+            decoration: BoxDecoration(
+              color: backgroundColor,
+              borderRadius: BorderRadius.circular(10),
+              border: Border.all(color: borderColor),
+            ),
+            child: Row(
+              children: [
+                const Icon(
+                  Icons.attach_file,
+                  color: primaryBlue,
+                  size: 19,
+                ),
+                const SizedBox(width: 9),
+                Expanded(
+                  child: Text(
+                    Uri.tryParse(url)?.pathSegments.lastOrNull ??
+                        'Existing attachment',
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: const TextStyle(
+                      color: headingColor,
+                      fontSize: 13,
+                    ),
+                  ),
+                ),
+                const Icon(
+                  Icons.check_circle,
+                  color: Colors.green,
+                  size: 18,
+                ),
+              ],
+            ),
+          ),
+        ),
+        const SizedBox(height: 12),
+      ],
+    );
+  }
+
+  Widget _buildSelectedAttachments() {
+    if (selectedFiles.isEmpty) {
+      return const Text(
+        'No new files selected.',
+        style: TextStyle(color: mutedColor, fontSize: 13),
+      );
+    }
+
+    return Column(
+      children: List.generate(selectedFiles.length, (index) {
+        final file = selectedFiles[index];
+
+        return Container(
+          margin: const EdgeInsets.only(bottom: 8),
+          padding: const EdgeInsets.symmetric(
+            horizontal: 12,
+            vertical: 10,
+          ),
+          decoration: BoxDecoration(
+            color: backgroundColor,
+            borderRadius: BorderRadius.circular(10),
+            border: Border.all(color: borderColor),
+          ),
+          child: Row(
+            children: [
+              const Icon(
+                Icons.insert_drive_file_outlined,
+                color: primaryBlue,
+                size: 20,
+              ),
+              const SizedBox(width: 10),
+              Expanded(
+                child: Text(
+                  file.name,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: const TextStyle(
+                    color: headingColor,
+                    fontSize: 13,
+                  ),
+                ),
+              ),
+              IconButton(
+                onPressed: isSaving ? null : () => _removeSelectedFile(index),
+                icon: const Icon(
+                  Icons.close,
+                  size: 19,
+                  color: Colors.red,
+                ),
+              ),
+            ],
+          ),
+        );
+      }),
+    );
+  }
+
+  // ------------------------------------------------------------
+  // BUILD
+  // ------------------------------------------------------------
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      backgroundColor: backgroundColor,
       appBar: AppBar(
-        backgroundColor: Theme.of(context).colorScheme.inversePrimary,
-        title: const Text('Create Notice'),
+        backgroundColor: Colors.white,
+        elevation: 0,
+        foregroundColor: headingColor,
+        title: Text(
+          isEditing ? 'Edit Notice' : 'Create Notice',
+          style: const TextStyle(
+            color: headingColor,
+            fontWeight: FontWeight.w700,
+            fontSize: 18,
+          ),
+        ),
       ),
-
-      body: Container(
-        color: Colors.grey.shade100,
-        child: Center(
+      body: SafeArea(
+        child: Form(
+          key: _formKey,
           child: SingleChildScrollView(
-            child: Padding(
-              padding: const EdgeInsets.all(16),
+            padding: const EdgeInsets.all(18),
+            child: Center(
               child: ConstrainedBox(
                 constraints: const BoxConstraints(maxWidth: 600),
-                child: Form(
-                  key: _noticeformkey,
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.stretch,
-                    children: [
-                      // TITLE CARD
-                      Card(
-                        elevation: 2,
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                        child: Padding(
-                          padding: const EdgeInsets.all(16),
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              const Text(
-                                "Title",
-                                style: TextStyle(
-                                  fontSize: 16,
-                                  fontWeight: FontWeight.w600,
-                                ),
-                              ),
-
-                              const SizedBox(height: 12),
-
-                              TextFormField(
-                                controller: _titleController,
-                                decoration: const InputDecoration(
-                                  hintText: "Enter notice title",
-                                  border: UnderlineInputBorder(),
-                                ),
-                                validator: (value) {
-                                  if (value == null || value.trim().isEmpty) {
-                                    return "Title is required";
-                                  }
-                                  return null;
-                                },
-                              ),
-                            ],
-                          ),
-                        ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      isEditing
+                          ? 'Update the notice details below.'
+                          : 'Share an important update with your college community.',
+                      style: const TextStyle(
+                        color: mutedColor,
+                        fontSize: 13,
                       ),
+                    ),
+                    const SizedBox(height: 20),
 
-                      // DESCRIPTION CARD
-                      Card(
-                        elevation: 2,
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                        child: Padding(
-                          padding: const EdgeInsets.all(16),
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              const Text(
-                                "Description",
-                                style: TextStyle(
-                                  fontSize: 16,
-                                  fontWeight: FontWeight.w600,
-                                ),
-                              ),
-
-                              const SizedBox(height: 12),
-
-                              TextFormField(
-                                controller: _descController,
-                                minLines: 1,
-                                maxLines: 15,
-                                decoration: const InputDecoration(
-                                  hintText: "Enter notice description",
-                                  border: UnderlineInputBorder(),
-                                ),
-                                validator: (value) {
-                                  if (value == null || value.trim().isEmpty) {
-                                    return "Description is required";
-                                  }
-                                  return null;
-                                },
-                              ),
-                            ],
-                          ),
-                        ),
+                    // TITLE
+                    _buildSectionCard(
+                      title: 'Notice Title',
+                      subtitle: 'Give your notice a clear heading.',
+                      icon: Icons.title,
+                      child: _buildTextField(
+                        controller: _titleController,
+                        hint: 'Enter notice title',
+                        maxLength: 100,
+                        validator: (value) {
+                          if (value == null || value.trim().isEmpty) {
+                            return 'Please enter a notice title.';
+                          }
+                          return null;
+                        },
                       ),
+                    ),
 
-                      // RECIPIENTS CARD
-                      Card(
-                        elevation: 2,
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                        child: Padding(
-                          padding: const EdgeInsets.all(16),
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              const Text(
-                                "Recipients",
-                                style: TextStyle(
-                                  fontSize: 16,
-                                  fontWeight: FontWeight.w600,
-                                ),
-                              ),
+                    const SizedBox(height: 16),
 
-                              const SizedBox(height: 12),
-
-                              CheckboxListTile(
-                                contentPadding: EdgeInsets.zero,
-                                controlAffinity:
-                                    ListTileControlAffinity.leading,
-                                title: const Text("Faculty"),
-                                value: faculty,
-                                onChanged: (bool? value) {
-                                  setState(() {
-                                    faculty = value ?? false;
-                                  });
-                                },
-                              ),
-
-                              CheckboxListTile(
-                                contentPadding: EdgeInsets.zero,
-                                controlAffinity:
-                                    ListTileControlAffinity.leading,
-                                title: const Text("Students"),
-                                value: students,
-                                onChanged: (bool? value) {
-                                  setState(() {
-                                    students = value ?? false;
-                                  });
-                                },
-                              ),
-
-                              if (students)
-                                Padding(
-                                  padding: const EdgeInsets.only(left: 32),
-                                  child: Column(
-                                    crossAxisAlignment:
-                                        CrossAxisAlignment.start,
-                                    children: [
-                                      CheckboxListTile(
-                                        contentPadding: EdgeInsets.zero,
-                                        controlAffinity:
-                                            ListTileControlAffinity.leading,
-                                        title: const Text("IF"),
-                                        value: ifStudent,
-                                        onChanged: (bool? value) {
-                                          setState(() {
-                                            ifStudent = value ?? false;
-                                          });
-                                        },
-                                      ),
-
-                                      CheckboxListTile(
-                                        contentPadding: EdgeInsets.zero,
-                                        controlAffinity:
-                                            ListTileControlAffinity.leading,
-                                        title: const Text("CM"),
-                                        value: cmStudent,
-                                        onChanged: (bool? value) {
-                                          setState(() {
-                                            cmStudent = value ?? false;
-                                          });
-                                        },
-                                      ),
-                                    ],
-                                  ),
-                                ),
-                            ],
-                          ),
-                        ),
+                    // DESCRIPTION
+                    _buildSectionCard(
+                      title: 'Description',
+                      subtitle: 'Provide the complete notice information.',
+                      icon: Icons.description_outlined,
+                      child: _buildTextField(
+                        controller: _descriptionController,
+                        hint: 'Write your notice here...',
+                        maxLines: 7,
+                        maxLength: 5000,
+                        validator: (value) {
+                          if (value == null || value.trim().isEmpty) {
+                            return 'Please enter the notice description.';
+                          }
+                          return null;
+                        },
                       ),
+                    ),
 
-                      // PIN CARD
-                      Card(
-                        elevation: 2,
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                        child: Padding(
-                          padding: const EdgeInsets.all(16),
-                          child: CheckboxListTile(
-                            contentPadding: EdgeInsets.zero,
-                            controlAffinity: ListTileControlAffinity.leading,
-                            title: const Text(
-                              "Pin Notice",
-                              style: TextStyle(fontWeight: FontWeight.w600),
-                            ),
-                            subtitle: const Text(
-                              "Keep this notice at the top of the notice list",
-                            ),
-                            value: pinned,
-                            onChanged: (bool? value) {
-                              setState(() {
-                                pinned = value ?? false;
-                              });
+                    const SizedBox(height: 16),
+
+                    // RECIPIENTS
+                    _buildSectionCard(
+                      title: 'Recipients',
+                      subtitle: 'Select who should receive this notice.',
+                      icon: Icons.people_outline,
+                      child: Column(
+                        children: [
+                          _buildRecipientTile(
+                            title: 'Faculty',
+                            subtitle: 'All faculty members',
+                            value: faculty,
+                            onChanged: (value) {
+                              setState(() => faculty = value ?? false);
                             },
                           ),
-                        ),
-                      ),
-
-                      // ATTACHMENTS CARD
-                      Card(
-                        elevation: 2,
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                        child: Padding(
-                          padding: const EdgeInsets.all(16),
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              const Text(
-                                "Attachments",
-                                style: TextStyle(
-                                  fontSize: 16,
-                                  fontWeight: FontWeight.w600,
-                                ),
-                              ),
-
-                              const SizedBox(height: 16),
-
-                              selectedFiles.isEmpty
-                                  ? const Text(
-                                      "No files selected",
-                                      style: TextStyle(color: Colors.grey),
-                                    )
-                                  : Column(
-                                      children: selectedFiles.map((file) {
-                                        return ListTile(
-                                          leading: const Icon(
-                                            Icons.attach_file,
-                                          ),
-
-                                          title: Text(file.name),
-
-                                          trailing: Row(
-                                            mainAxisSize: MainAxisSize.min,
-                                            children: [
-                                              IconButton(
-                                                icon: const Icon(
-                                                  Icons.visibility,
-                                                ),
-                                                tooltip: "View File",
-                                                onPressed: () async {
-                                                  print(file.name);
-                                                  print(file.path);
-                                                },
-                                              ),
-
-                                              IconButton(
-                                                icon: const Icon(Icons.delete),
-                                                tooltip: "Remove File",
-                                                onPressed: () {
-                                                  setState(() {
-                                                    selectedFiles.remove(file);
-                                                  });
-                                                },
-                                              ),
-                                            ],
-                                          ),
-                                        );
-                                      }).toList(),
-                                    ),
-
-                              const SizedBox(height: 16),
-
-                              OutlinedButton.icon(
-                                onPressed: pickFiles,
-                                icon: const Icon(Icons.attach_file),
-                                label: const Text("Add Files"),
-                              ),
-                            ],
-                          ),
-                        ),
-                      ),
-
-                      const SizedBox(height: 16),
-
-                      // SEND / UPDATE BUTTON
-                      SizedBox(
-                        height: 50,
-                        child: ElevatedButton(
-                          onPressed: () async {
-                            if (_noticeformkey.currentState!.validate()) {
-                              List<String> recipients = [];
-
-                              if (faculty) {
-                                recipients.add("Faculty");
-                              }
-
-                              if (ifStudent) {
-                                recipients.add("IF");
-                              }
-
-                              if (cmStudent) {
-                                recipients.add("CM");
-                              }
-
-                              // For CREATE mode, attachments are uploaded
-                              // to Firebase Storage later.
-                              List<String> attachmentUrls = [];
-
-                              final currentUser =
-                                  FirebaseAuth.instance.currentUser;
-
-                              String? createdBy;
-                              String? createdByUid;
-
-                              if (widget.notice == null) {
-                                createdBy = await getCurrentUserName();
-                                createdByUid = currentUser?.uid;
-                              } else {
-                                createdBy = widget.notice!.createdBy;
-                                createdByUid = widget.notice!.createdByUid;
-                              }
-
-                              final noticeData = Notice(
-                                title: _titleController.text.trim(),
-                                description: _descController.text.trim(),
-                                recipients: recipients,
-                                attachmentUrls: attachmentUrls,
-                                createdBy: createdBy,
-                                createdByUid: createdByUid,
-                                pinned: pinned,
+                          const Divider(height: 1, color: borderColor),
+                          _buildRecipientTile(
+                            title: 'IT Department',
+                            subtitle: 'IT students and IT class representative',
+                            value: itStudents,
+                            onChanged: (value) {
+                              setState(
+                                () => itStudents = value ?? false,
                               );
+                            },
+                          ),
+                          const Divider(height: 1, color: borderColor),
+                          _buildRecipientTile(
+                            title: 'CM Department',
+                            subtitle: 'CM students and CM class representative',
+                            value: cmStudents,
+                            onChanged: (value) {
+                              setState(
+                                () => cmStudents = value ?? false,
+                              );
+                            },
+                          ),
+                        ],
+                      ),
+                    ),
 
-                              if (widget.notice == null) {
-                                // CREATE MODE
+                    const SizedBox(height: 16),
 
-                                await NoticeService.createNotice(
-                                  noticeData,
-                                  selectedFiles,
-                                );
-                              } else {
-                                // EDIT MODE
+                    // ATTACHMENTS
+                    _buildSectionCard(
+                      title: 'Attachments',
+                      subtitle: 'Attach supporting documents if required.',
+                      icon: Icons.attach_file,
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          _buildExistingAttachments(),
+                          _buildSelectedAttachments(),
+                          const SizedBox(height: 12),
+                          OutlinedButton.icon(
+                            onPressed: isSaving ? null : _pickFiles,
+                            icon: const Icon(Icons.add),
+                            label: const Text('Add files'),
+                            style: OutlinedButton.styleFrom(
+                              foregroundColor: primaryBlue,
+                              side: const BorderSide(color: primaryBlue),
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(10),
+                              ),
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 16,
+                                vertical: 12,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
 
-                                await NoticeService.updateNotice(
-                                  widget.notice!.id!,
-                                  noticeData,
-                                );
-                              }
+                    const SizedBox(height: 24),
 
-                              if (!mounted) return;
-
-                              Navigator.pop(context);
-                            }
-                          },
-
-                          child: Text(
-                            widget.notice == null
-                                ? "Send Notice"
-                                : "Update Notice",
+                    // SAVE BUTTON
+                    SizedBox(
+                      width: double.infinity,
+                      height: 52,
+                      child: ElevatedButton(
+                        onPressed: isSaving ? null : _saveNotice,
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: primaryBlue,
+                          foregroundColor: Colors.white,
+                          disabledBackgroundColor:
+                              primaryBlue.withValues(alpha: 0.5),
+                          elevation: 0,
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12),
                           ),
                         ),
+                        child: isSaving
+                            ? const SizedBox(
+                                height: 22,
+                                width: 22,
+                                child: CircularProgressIndicator(
+                                  color: Colors.white,
+                                  strokeWidth: 2,
+                                ),
+                              )
+                            : Row(
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                children: [
+                                  Icon(
+                                    isEditing
+                                        ? Icons.save_outlined
+                                        : Icons.send_outlined,
+                                    size: 19,
+                                  ),
+                                  const SizedBox(width: 9),
+                                  Text(
+                                    isEditing
+                                        ? 'Update Notice'
+                                        : 'Publish Notice',
+                                    style: const TextStyle(
+                                      fontSize: 15,
+                                      fontWeight: FontWeight.w700,
+                                    ),
+                                  ),
+                                ],
+                              ),
                       ),
-                    ],
-                  ),
+                    ),
+
+                    const SizedBox(height: 20),
+                  ],
                 ),
               ),
             ),
